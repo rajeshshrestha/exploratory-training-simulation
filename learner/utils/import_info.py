@@ -7,10 +7,8 @@ import pandas as pd
 from flask import request
 from flask_restful import Resource
 from rich.console import Console
-
+from .initialize_variables import scenarios, processed_dfs, required_fds
 from .helper import StudyMetric, FDMeta, initialPrior
-from .env_variables import TOTAL_SCENARIOS
-
 console = Console()
 
 
@@ -48,7 +46,6 @@ class Import(Resource):
         initial_user_h = request.form.get('initial_fd')
         fd_comment = request.form.get('fd_comment')
         skip_user = request.form.get('skip_user')
-        violation_ratio = request.form.get('violation_ratio')
         if scenario_id is None or email is None:
             scenario_id = json.loads(request.data)['scenario_id']
             email = json.loads(request.data)['email']
@@ -56,54 +53,34 @@ class Import(Resource):
             fd_comment = json.loads(request.data)['fd_comment']
             skip_user = False if 'skip_user' not in json.loads(
                 request.data).keys() else json.loads(request.data)['skip_user']
-            violation_ratio = None if 'violation_ratio' not in json.loads(
-                request.data).keys() else json.loads(request.data)[
-                'violation_ratio']
-        print(scenario_id)
+
         console.log(initial_user_h)
 
         if not skip_user:
             # Get the user from the users list
             try:
                 users = pickle.load(open('./study-utils/users.p', 'rb'))
-            except:
+            except Exception as e:
                 return {'msg': '[ERROR] users does not exist'}, 400, {
                     'Access-Control-Allow-Origin': '*'}
 
             # Save the user's questionnaire responses
             if email not in users.keys():
                 return {
-                           'msg': '[ERROR] no user exists with this email'}, 400, {
-                           'Access-Control-Allow-Origin': '*'}
+                    'msg': '[ERROR] no user exists with this email'}, 400, {
+                    'Access-Control-Allow-Origin': '*'}
 
             user = users[email]
             user.scenarios = user.scenarios[1:]
             user.runs.append(new_project_id)
-            user_interaction_number = TOTAL_SCENARIOS - len(user.scenarios)
             users[email] = user
 
             # Save the users object updates
             pickle.dump(users, open('./study-utils/users.p', 'wb'))
 
-        else:
-            user_interaction_number = 1 if violation_ratio == 'close' else 5
-
-        with open('../scenarios.json', 'r') as f:
-            scenarios_list = json.load(f)
-        scenario = scenarios_list[scenario_id]
-        if user_interaction_number <= 3:
-            target_h_sample_ratio = 0.2
-            alt_h_sample_ratio = 0.6
-        else:
-            target_h_sample_ratio = 0.3
-            alt_h_sample_ratio = 0.45
-        scenario['target_h_sample_ratio'] = target_h_sample_ratio
-        scenario['alt_h_sample_ratio'] = alt_h_sample_ratio
-        target_fd = scenario['target_fd']
         project_info = {
             'email': email,
             'scenario_id': scenario_id,
-            'scenario': scenario
         }
 
         with open(new_project_dir + '/project_info.json', 'w') as f:
@@ -111,9 +88,9 @@ class Import(Resource):
 
         print('*** Project info saved ***')
 
-        data = pd.read_csv(scenario['dirty_dataset'])
-        header = [col for col in data.columns]
-        # random.shuffle(header)
+        data = processed_dfs[scenario_id]
+        header = [col for col in data.columns if col != 'is_clean']
+        scenario = scenarios[scenario_id]
 
         # Initialize the iteration counter
         current_iter = 0
@@ -126,23 +103,19 @@ class Import(Resource):
                         value=[initial_user_h, fd_comment],
                         elapsed_time=0)]
         interaction_metadata['feedback_history'] = dict()
+        interaction_metadata['feedback_recent'] = dict()
         interaction_metadata['sample_history'] = list()
         for idx in data.index:
-            interaction_metadata['feedback_history'][int(idx)] = dict()
+            interaction_metadata['feedback_history'][idx] = dict()
+            interaction_metadata['feedback_recent'][idx] = dict()
             for col in header:
-                interaction_metadata['feedback_history'][int(idx)][
+                interaction_metadata['feedback_history'][idx][
                     col] = list()
+                interaction_metadata['feedback_recent'][idx][col] = False
 
         # Initialize hypothesis parameters
         fd_metadata = dict()
-        h_space = scenario['hypothesis_space']
-        for h in h_space:
-
-            # Calculate the mean and variance
-            h['vio_pairs'] = set(tuple(vp) for vp in h['vio_pairs'])
-
-            # todo: uncheck this previous
-            # mu = h['conf']      # h['conf'] = # tuples that satisfy FD / # tuples total
+        for h in scenario['hypothesis_space']:
             mu = 0.1
             if mu == 1:
                 mu = 0.99999
@@ -151,22 +124,19 @@ class Import(Resource):
             # Calculate alpha and beta
             alpha, beta = initialPrior(mu, variance)
 
+
             # Initialize the FD metadata object
             fd_m = FDMeta(
-                fd=h['cfd'],
+                fd=h,
                 a=alpha,
                 b=beta,
-                support=h['support'],
-                vios=h['vios'],
-                vio_pairs=h['vio_pairs'],
             )
 
             print('iter: 0'),
             print('alpha:', fd_m.alpha)
             print('beta:', fd_m.beta)
-            print('conf:', h['conf'])
 
-            fd_metadata[h['cfd']] = fd_m
+            fd_metadata[h] = fd_m
 
         current_iter += 1
 
@@ -194,12 +164,8 @@ class Import(Resource):
                     open(new_project_dir + '/fd_metadata.p', 'wb'))
         pickle.dump(current_iter,
                     open(new_project_dir + '/current_iter.p', 'wb'))
-        pickle.dump(fd_metadata[target_fd].vio_pairs,
-                    open(new_project_dir + '/X.p', 'wb'))
 
-        total_indices = set()
-        for fd in project_info['scenario']['hypothesis_space']:
-            total_indices |= set(fd['support'])
+        total_indices = set(data.index)
         pickle.dump(total_indices,
                     open(new_project_dir + '/unserved_indices.p', 'wb'))
 
@@ -207,7 +173,6 @@ class Import(Resource):
 
         # Return information to the user
         response = {
-            'project_id': new_project_id,
-            'description': scenario['description']
+            'project_id': new_project_id
         }
         return response, 201, {'Access-Control-Allow-Origin': '*'}

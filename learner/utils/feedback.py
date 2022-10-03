@@ -7,8 +7,9 @@ from flask import request
 from flask_restful import Resource
 from rich.console import Console
 
-from .env_variables import SAMPLING_METHOD, TOTAL_ITERATIONS, RESAMPLE
+from .env_variables import SAMPLING_METHOD, TOTAL_ITERATIONS, RESAMPLE, SAMPLE_SIZE
 from .helper import buildSample, interpretFeedback, StudyMetric, recordFeedback
+from .initialize_variables import processed_dfs
 
 console = Console()
 
@@ -35,7 +36,6 @@ class Feedback(Resource):
         console.log(current_user_h)
 
         feedback = pd.DataFrame.from_dict(feedback_dict, orient='index')
-        sample_size = 10
 
         print('*** Necessary objects loaded ***')
 
@@ -45,40 +45,32 @@ class Feedback(Resource):
         print(current_iter)
         current_time = time.time()
 
-        curr_sample_X = pickle.load(
-            open('./store/' + project_id + '/current_X.p', 'rb'))
-        X = pickle.load(open('./store/' + project_id + '/X.p', 'rb'))
-
         print('*** Iteration counter updated ***')
 
         # Get the project info
         with open('./store/' + project_id + '/project_info.json', 'r') as f:
             project_info = json.load(f)
-
+        scenario_id = project_info['scenario_id']
         print('*** Project info loaded ***')
 
-        # Load the dataset
-        data = pd.read_csv(project_info['scenario']['dirty_dataset'],
-                           keep_default_na=False)
-
+        data = processed_dfs[scenario_id]
         print('*** Loaded dirty dataset ***')
 
         # Record the user's feedback and analyze it
-        s_in = data.iloc[feedback.index]
+        s_in = data.loc[feedback.index]
         print('*** Extracted sample from dataset ***')
-        recordFeedback(data, feedback_dict, curr_sample_X, project_id,
+        recordFeedback(data, feedback_dict, project_id,
                        current_iter, current_time)
-        target_fd = project_info['scenario'][
-            'target_fd']  # NOTE: For current sims only
+
         interpretFeedback(s_in, feedback, project_id,
                           current_iter, current_time)
 
         # Build a new sample
         current_iter += 1
-        s_out, new_sample_X = buildSample(data, sample_size,
-                                          project_id,
-                                          sampling_method=SAMPLING_METHOD,
-                                          resample=RESAMPLE)
+        s_out = buildSample(data, SAMPLE_SIZE,
+                            project_id,
+                            sampling_method=SAMPLING_METHOD,
+                            resample=RESAMPLE)
         s_index = s_out.index
 
         # open file containing the indices of unserved tuples, update it and dump
@@ -91,8 +83,6 @@ class Feedback(Resource):
 
         pickle.dump(s_index,
                     open('./store/' + project_id + '/current_sample.p', 'wb'))
-        pickle.dump(new_sample_X,
-                    open('./store/' + project_id + '/current_X.p', 'wb'))
 
         s_out.insert(0, 'id', s_out.index, True)
         print(s_out.index)
@@ -117,12 +107,9 @@ class Feedback(Resource):
                 feedback.append({
                     'row': idx,
                     'col': col,
-                    'marked': False if col == 'id' else (bool(
-                        interaction_metadata['feedback_history'][int(idx)][
-                            col][-1].marked) if len(
-                        interaction_metadata['feedback_history'][int(idx)][
-                            col]) > 0 else False)
-                })
+                    'marked': False if col == 'id' else bool(
+                        interaction_metadata['feedback_recent'][idx][
+                            col])})
 
         print('*** Feedback object created ***')
 
@@ -145,7 +132,6 @@ class Feedback(Resource):
         # Return information to the user
         response = {
             'sample': s_out.to_json(orient='index'),
-            'X': [list(v) for v in new_sample_X],
             'feedback': json.dumps(feedback),
             'msg': msg
         }

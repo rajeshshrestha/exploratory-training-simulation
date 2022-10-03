@@ -2,14 +2,13 @@ import json
 import pickle
 import time
 
-import pandas as pd
 from flask import request
 from flask_restful import Resource
 from rich.console import Console
 
-from .env_variables import SAMPLING_METHOD, RESAMPLE
+from .env_variables import SAMPLING_METHOD, RESAMPLE, SAMPLE_SIZE
 from .helper import buildSample
-
+from .initialize_variables import processed_dfs
 console = Console()
 
 
@@ -22,11 +21,11 @@ class Sample(Resource):
         # Get the project ID
         project_id = request.form.get('project_id')
         if project_id is None:
-            # print(request.data)
             project_id = json.loads(request.data)['project_id']
-        sample_size = 10
+
         with open('./store/' + project_id + '/project_info.json') as f:
             project_info = json.load(f)
+        scenario_id = project_info['scenario_id']
 
         # Calculate the start time of the interaction
         start_time = time.time()
@@ -35,17 +34,12 @@ class Sample(Resource):
 
         print('*** Project info loaded ***')
 
-        # Get data
-        data = pd.read_csv(project_info['scenario']['dirty_dataset'],
-                           keep_default_na=False)
-        current_iter = pickle.load(
-            open('./store/' + project_id + '/current_iter.p', 'rb'))
-        X = pickle.load(open('./store/' + project_id + '/X.p',
-                             'rb'))  # list of true violation pairs (vio pairs for target FD)
+        data = processed_dfs[scenario_id]
 
         # Build sample
-        s_out, sample_X = buildSample(data, sample_size, project_id,
-                                      sampling_method=SAMPLING_METHOD, resample=RESAMPLE)
+        s_out = buildSample(data, SAMPLE_SIZE, project_id,
+                            sampling_method=SAMPLING_METHOD,
+                            resample=RESAMPLE)
         s_index = s_out.index
 
         # open file containing the indices of unserved tuples, update it and dump
@@ -58,8 +52,6 @@ class Sample(Resource):
 
         pickle.dump(s_index,
                     open('./store/' + project_id + '/current_sample.p', 'wb'))
-        pickle.dump(sample_X,
-                    open('./store/' + project_id + '/current_X.p', 'wb'))
 
         # Add ID to s_out (for use on frontend)
         s_out.insert(0, 'id', s_out.index, True)
@@ -79,7 +71,6 @@ class Sample(Resource):
         # Return information to the user
         response = {
             'sample': s_out.to_json(orient='index'),
-            'X': [list(v) for v in sample_X],
             'feedback': json.dumps(feedback),
             'msg': '[SUCCESS] Successfully built sample.'
         }
