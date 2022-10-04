@@ -10,9 +10,14 @@ import numpy as np
 from scipy.stats import binom
 from .initialize_variables import processed_dfs
 from .initialize_variables import scenarios
-
+from .initialize_variables import models_dict
+from .env_variables import MODEL_FDS_TOP_K
+from .env_variables import ACCURACY_ESTIMATION_SAMPLE_NUM
+from .env_variables import ACTIVE_LEARNING_CANDIDATE_INDICES_NUM
 
 # Calculate the initial prior (alpha/beta) for an FD
+
+
 def initialPrior(mu, variance):
     if mu == 1:
         mu = 0.9999
@@ -60,9 +65,6 @@ class FDMeta(object):
         self.conf_history = [StudyMetric(
             iter_num=0, value=self.conf, elapsed_time=0)]
 
-        self.label_accuracy_history = [StudyMetric(
-            iter_num=0, value=self.conf, elapsed_time=0)]
-
     # Convert class object to dictionary
 
     def asdict(self):
@@ -91,8 +93,7 @@ class FDMeta(object):
             'beta': self.beta,
             'beta_history': beta_history,
             'conf': self.conf,
-            'conf_history': conf_history,
-            'label_accuracy_history': label_accuracy_history,
+            'conf_history': conf_history
         }
 
 
@@ -119,29 +120,12 @@ def recordFeedback(data, feedback, project_id, current_iter,
                    current_time):
     interaction_metadata = pickle.load(
         open('./store/' + project_id + '/interaction_metadata.p', 'rb'))
-    # study_metrics = pickle.load( open('./store/' + project_id + '/study_metrics.p', 'rb') )
+    # study_metrics = json.load( open('./store/' + project_id + '/study_metrics.json', 'r') )
     start_time = pickle.load(
         open('./store/' + project_id + '/start_time.p', 'rb'))
 
     # Calculate elapsed time
     elapsed_time = current_time - start_time
-
-    # Store user feedback
-    # for idx in data.index:
-    #     if idx in feedback.keys():
-    #         for col in data.columns:
-    #             interaction_metadata['feedback_history'][idx][col].append(
-    #                 CellFeedback(
-    #                     iter_num=current_iter,
-    #                     marked=bool(feedback[idx][col]),
-    #                     elapsed_time=elapsed_time))
-    #     else:
-    #         for col in data.columns:
-    #             interaction_metadata['feedback_history'][idx][col].append(
-    #                 CellFeedback(
-    #                     iter_num=current_iter, marked=interaction_metadata['feedback_history'][idx][col][
-    #                         -1].marked if current_iter > 1 else False,
-    #                     elapsed_time=elapsed_time))
 
     for idx in feedback.keys():
         for col in data.columns:
@@ -150,8 +134,8 @@ def recordFeedback(data, feedback, project_id, current_iter,
                     iter_num=current_iter,
                     marked=bool(feedback[idx][col]),
                     elapsed_time=elapsed_time))
-            interaction_metadata['feedback_recent'][idx][col] = bool(feedback[idx][col])
-
+            interaction_metadata['feedback_recent'][idx][col] = bool(
+                feedback[idx][col])
 
     # Store latest sample in sample history
     interaction_metadata['sample_history'].append(
@@ -230,6 +214,27 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
         print(
             f'FD: {fd}, conf: {fd_m.conf}, alpha: {fd_m.alpha}, beta: {fd_m.beta}')
 
+    '''Compute accuracy in Unserved dataset'''
+    unserved_indices = pickle.load(
+        open('./store/' + project_id + '/unserved_indices.p', 'rb'))  # whether to compute on all remaining unserved indices or sample from the remaining one
+    model_dict = dict((fd, fd_m.conf)for fd, fd_m in fd_metadata.items())
+    validation_indices = np.random.choice(
+        list(unserved_indices), size=ACCURACY_ESTIMATION_SAMPLE_NUM, replace=False)
+    accuracy = compute_accuracy(indices=validation_indices,
+                                model=model_dict,
+                                scenario_id=scenario_id,
+                                top_k=MODEL_FDS_TOP_K)
+    print("=============================================================================")
+    print(
+        f"Accuracy in {len(validation_indices)} unserved data: {round(accuracy,2)}")
+    print("=============================================================================")
+    study_metrics = json.load(
+        open('./store/' + project_id + '/study_metrics.json', 'rb'))
+    study_metrics['iter_accuracy'].append(accuracy)
+    study_metrics['elapsed_time'].append(elapsed_time)
+    json.dump(study_metrics,
+              open('./store/' + project_id + '/study_metrics.json', 'w'))
+
     # Save updated alpha/beta metrics
     pickle.dump(fd_metadata, open(
         './store/' + project_id + '/fd_metadata.p', 'wb'))
@@ -279,7 +284,7 @@ def returnRandomSamples(sample_size, project_id, resample=False):
 
 
 # Return tuples in using active learning
-def returnActiveLearningTuples(sample_size, project_id, model='SimpleAgg',
+def returnActiveLearningTuples(sample_size, project_id,
                                resample=False):
     '''Read current fd metadata of the project'''
     fd_metadata = pickle.load(
@@ -288,55 +293,34 @@ def returnActiveLearningTuples(sample_size, project_id, model='SimpleAgg',
     unserved_indices = pickle.load(
         open('./store/' + project_id + '/unserved_indices.p', 'rb'))
 
+    '''Subsample candiate unserved indices'''
+    if ACTIVE_LEARNING_CANDIDATE_INDICES_NUM > 0:
+        candidate_unserved_indices = set(np.random.choice(list(
+            unserved_indices), size=ACTIVE_LEARNING_CANDIDATE_INDICES_NUM, replace=False))
+    else:
+        candidate_unserved_indices = unserved_indices
+
+    with open('./store/' + project_id + '/project_info.json', 'r') as f:
+        project_info = json.load(f)
+        scenario_id = project_info['scenario_id']
+
+    model_dict = dict((fd, fd_m.conf)for fd, fd_m in fd_metadata.items())
+    top_k_model_dict = dict(
+        sorted(model_dict.items(), key=itemgetter(1), reverse=True)[:MODEL_FDS_TOP_K])
+
     '''Compute the active learning '''
-    if model == 'Bayesian':
-        overall_entropy_dict = dict()
-        overall_violation_pairs = set()
-        for fd, metadata_obj in fd_metadata.items():
-            '''Find all the violation pairs of all the hypothesis in hypothesis space'''
-            overall_violation_pairs |= set(metadata_obj.violation_pairs)
+    overall_entropy_dict = compute_entropy_values(
+        indices=candidate_unserved_indices, top_model_fds=top_k_model_dict, scenario_id=scenario_id)
 
-            entropy_dict = compute_active_learning_indices(metadata_obj)
+    overall_violation_pairs = set()
 
-            '''Add to the overall_entropy_dict weighing using confidence of fd itself'''
-            alpha, beta = metadata_obj.alpha, metadata_obj.beta
-            for idx, entropy_value in entropy_dict.items():
-                '''Skip index if resample is disabled and index already presented to the user'''
-                if (not resample) and (idx not in unserved_indices):
-                    continue
-                if idx not in overall_entropy_dict:
-                    overall_entropy_dict[idx] = (alpha) / (
-                        alpha + beta) * entropy_value
-                else:
-                    overall_entropy_dict[idx] += (alpha) / \
-                                                 (alpha + beta) * entropy_value
-    elif model == 'FP':
-        max_conf, max_fd_obj = -1, None
-        for fd, metadata_obj in fd_metadata.items():
-            if metadata_obj.conf > max_conf:
-                max_conf = metadata_obj.conf
-                max_fd_obj = metadata_obj
-        overall_entropy_dict = compute_active_learning_indices(max_fd_obj)
-        overall_violation_pairs = set(max_fd_obj.violation_pairs)
-    elif model == 'SimpleAgg':
-        overall_entropy_dict = dict()
-        overall_violation_pairs = set()
-        for fd, metadata_obj in fd_metadata.items():
-            '''Find all the violation pairs of all the hypothesis in hypothesis space'''
-            overall_violation_pairs |= set(metadata_obj.violation_pairs)
-
-            entropy_dict = compute_active_learning_indices(metadata_obj)
-
-            '''Add to the overall_entropy_dict weighing using confidence of fd itself'''
-            alpha, beta = metadata_obj.alpha, metadata_obj.beta
-            for idx, entropy_value in entropy_dict.items():
-                '''Skip index if resample is disabled and index already presented to the user'''
-                if (not resample) and (idx not in unserved_indices):
-                    continue
-                if idx not in overall_entropy_dict:
-                    overall_entropy_dict[idx] = entropy_value
-                else:
-                    overall_entropy_dict[idx] += entropy_value
+    if resample:
+        for fd in top_k_model_dict:
+            overall_violation_pairs |= scenarios[scenario_id]['hypothesis_space'][fd]['violation_pairs']
+    else:
+        for fd in top_k_model_dict:
+            overall_violation_pairs |= set([pair for pair in scenarios[scenario_id]['hypothesis_space'][fd]['violation_pairs'] if pair[0]
+                                           in unserved_indices and pair[1] in unserved_indices and (pair[0] in candidate_unserved_indices or pair[1] in candidate_unserved_indices)])
 
     '''Get top sample_size indices'''
     sorted_entropy_items = sorted(
@@ -345,6 +329,7 @@ def returnActiveLearningTuples(sample_size, project_id, model='SimpleAgg',
     '''Sampled data from the violation pairs that has top n entropy values'''
     s_out = set()
     for idx, entropy_value in sorted_entropy_items:
+
         '''Sample from the violation pairs that has the idx in it'''
         candidate_violation_pairs = [
             vio_pair for vio_pair in overall_violation_pairs if
@@ -353,10 +338,6 @@ def returnActiveLearningTuples(sample_size, project_id, model='SimpleAgg',
             continue
         new_data = random.sample(candidate_violation_pairs, 1)[0]
 
-        if not resample:
-            if (new_data[0] not in unserved_indices) or (
-                    new_data[1] not in unserved_indices):
-                continue
         s_out |= set(new_data)
 
         if len(s_out) >= sample_size:
@@ -365,34 +346,62 @@ def returnActiveLearningTuples(sample_size, project_id, model='SimpleAgg',
     return list(s_out)
 
 
-def compute_active_learning_indices(single_fd_metadata, n=None):
-    '''Compute the current probability of fd being the correct one'''
-    alpha = single_fd_metadata.alpha
-    beta = single_fd_metadata.beta
-    p = alpha / (alpha + beta)
-
-    '''Entropy dict for active learning'''
-    entropy_dict = dict()
-
-    '''Iterate through all the tuples'''
-    for idx in single_fd_metadata.data_indices:
-        total_compliance_num = len(single_fd_metadata.supports.get(idx))
-        total_violation_num = len(single_fd_metadata.violations.get(idx))
-
-        '''Compute probability of tuple being clean based on compliance on other tuples and the probability of fd being the correct one'''
-        clean_prob = binom.pmf(k=total_compliance_num, n=(
-            total_compliance_num + total_violation_num), p=p)
-
-        '''Compute entropy'''
-        entropy = - clean_prob * \
-            np.log2(clean_prob) - (1 - clean_prob) * np.log2(
-                1 - clean_prob)
-        entropy_dict[idx] = entropy
-
-    if n is not None:
-        '''Find top values'''
-        top_n_entropy_dict = dict(
-            sorted(entropy_dict.items(), key=itemgetter(1), reverse=True)[:n])
-        return top_n_entropy_dict
+def compute_conditional_clean_prob(idx, fd, fd_prob, scenario_id, data_indices=None):
+    if data_indices is None:
+        compliance_num = len(
+            scenarios[scenario_id]['hypothesis_space'][fd]['supports'].get(idx, []))
+        violation_num = len(
+            scenarios[scenario_id]['hypothesis_space'][fd]['violations'].get(idx, []))
     else:
-        return entropy_dict
+        compliance_num = len([idx_ for idx_ in scenarios[scenario_id]['hypothesis_space']
+                             [fd]['supports'].get(idx, []) if idx_ in data_indices])
+        violation_num = len([idx_ for idx_ in scenarios[scenario_id]['hypothesis_space']
+                            [fd]['violations'].get(idx, []) if idx_ in data_indices])
+
+    tuple_clean_score = math.exp(fd_prob*(compliance_num-violation_num))
+    tuple_dirty_score = math.exp(fd_prob*(-compliance_num+violation_num))
+    cond_p_clean = tuple_clean_score/(tuple_clean_score+tuple_dirty_score)
+
+    return cond_p_clean
+
+
+def get_average_cond_clean_prediction(indices, model, scenario_id):
+    conditional_clean_probability_dict = dict()
+    indices = set(indices)
+    for idx in indices:
+        cond_clean_prob = np.mean([compute_conditional_clean_prob(
+            idx=idx, fd=fd, fd_prob=fd_prob, scenario_id=scenario_id, data_indices=indices) for fd, fd_prob in model.items()])  # whether to include the validation_indices or all the data_indices while computing the conditional clean probability
+        conditional_clean_probability_dict[idx] = cond_clean_prob
+    return conditional_clean_probability_dict
+
+
+def compute_accuracy(indices, model, scenario_id, top_k):
+    '''Pick top k fds if needed'''
+    if 0 < top_k < len(model):
+        model = dict(sorted(model.items(), key=itemgetter(1),
+                     reverse=True)[:top_k])
+
+    conditional_clean_probability_dict = get_average_cond_clean_prediction(
+        indices=indices, model=model, scenario_id=scenario_id)
+    is_correct = [(prob > 0.5) and models_dict[scenario_id]["predictions"][idx]
+                  for idx, prob in conditional_clean_probability_dict.items() if prob != 0.5]  # ignore indices with probability=0.5 as this means most probably, there wasn't any compliance and violations in the validation data for the tuple
+
+    print(conditional_clean_probability_dict)
+    accuracy = np.mean(is_correct)
+
+    return accuracy
+
+
+def compute_entropy_values(indices, top_model_fds, scenario_id):
+
+    conditional_clean_probability_dict = get_average_cond_clean_prediction(
+        indices=indices, model=top_model_fds, scenario_id=scenario_id)
+
+    probabilities = np.array([conditional_clean_probability_dict[idx]
+                              for idx in indices])
+    entropies = -probabilities * \
+        np.log2(probabilities)-(1-probabilities)*np.log2(1-probabilities)
+    entropy_dict = dict((idx, entropy_val)
+                        for idx, entropy_val in zip(indices, entropies))
+
+    return entropy_dict

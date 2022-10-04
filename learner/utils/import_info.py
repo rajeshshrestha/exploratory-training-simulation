@@ -7,8 +7,11 @@ import pandas as pd
 from flask import request
 from flask_restful import Resource
 from rich.console import Console
-from .initialize_variables import scenarios, processed_dfs, required_fds
+from .initialize_variables import scenarios, processed_dfs
 from .helper import StudyMetric, FDMeta, initialPrior
+import random
+from .env_variables import SAMPLING_METHOD
+
 console = Console()
 
 
@@ -18,13 +21,15 @@ class Import(Resource):
 
     def post(self):
         # Initialize a new project
-        projects = [('0x' + d) for d in os.listdir('./store') if
-                    os.path.isdir(os.path.join('./store/', d))]
-        if len(projects) == 0:
-            new_project_id = '{:08x}'.format(1)
-        else:
-            project_ids = [int(d, 0) for d in projects]
-            new_project_id = '{:08x}'.format(max(project_ids) + 1)
+        # projects = [('0x' + d) for d in os.listdir('./store') if
+        #             os.path.isdir(os.path.join('./store/', d))]
+        # if len(projects) == 0:
+        #     new_project_id = '{:08x}'.format(1)
+        # else:
+        #     project_ids = [int(d, 0) for d in projects]
+        #     new_project_id = '{:08x}'.format(max(project_ids) + 1)
+
+        new_project_id = SAMPLING_METHOD+"_"+str(random.randint(1,1e15))
         new_project_dir = './store/' + new_project_id
 
         # Save the new project
@@ -147,8 +152,10 @@ class Import(Resource):
         study_metrics['all_err_precision'] = list()
         study_metrics['all_err_recall'] = list()
         study_metrics['all_err_f1'] = list()
-        pickle.dump(study_metrics,
-                    open(new_project_dir + '/study_metrics.p', 'wb'))
+        study_metrics['iter_accuracy'] = list()
+        study_metrics['elapsed_time'] = list()
+        json.dump(study_metrics,
+                    open(new_project_dir + '/study_metrics.json', 'w'))
 
         # Initialize tuple metadata and value metadata objects
         tuple_weights = dict()

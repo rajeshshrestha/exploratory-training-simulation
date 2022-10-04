@@ -76,7 +76,7 @@ class Feedback(Resource):
         # open file containing the indices of unserved tuples, update it and dump
         unserved_indices = pickle.load(
             open('./store/' + project_id + '/unserved_indices.p', 'rb'))
-        unserved_indices = list(set(unserved_indices) - set(s_index))
+        unserved_indices = (set(unserved_indices) - set(s_index))
         pickle.dump(unserved_indices,
                     open('./store/' + project_id + '/unserved_indices.p',
                          'wb'))

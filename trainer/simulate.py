@@ -5,6 +5,9 @@ import sys
 
 import requests
 from tqdm import tqdm
+from functools import partial
+from multiprocessing import Pool
+import os
 
 from initialize_variables import scenarios, models_dict
 
@@ -163,5 +166,8 @@ if __name__ == '__main__':
     stat_calc = None if len(sys.argv) < 6 else sys.argv[
         5]  # Are we evaluating precision or recall?
 
-    for i in tqdm(list(range(num_runs))):
-        run(s, b_type)
+    
+    cpu_num = os.cpu_count()
+
+    with Pool(10) as p:
+        p.map(partial(run, b_type=b_type), [s for i in range(num_runs)])
