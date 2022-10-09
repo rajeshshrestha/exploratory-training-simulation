@@ -1,6 +1,7 @@
 import json
 import pickle
 import time
+import logging
 
 from flask import request
 from flask_restful import Resource
@@ -9,6 +10,8 @@ from rich.console import Console
 from .env_variables import SAMPLING_METHOD, RESAMPLE, SAMPLE_SIZE
 from .helper import buildSample
 from .initialize_variables import processed_dfs
+
+logger = logging.getLogger(__file__)
 console = Console()
 
 
@@ -32,7 +35,7 @@ class Sample(Resource):
         pickle.dump(start_time,
                     open('./store/' + project_id + '/start_time.p', 'wb'))
 
-        print('*** Project info loaded ***')
+        logger.info('*** Project info loaded ***')
 
         data = processed_dfs[scenario_id]
 
@@ -66,7 +69,7 @@ class Sample(Resource):
                     'marked': False
                 })
 
-        print('*** Feedback object created ***')
+        logger.info('*** Feedback object created ***')
 
         # Return information to the user
         response = {

@@ -5,6 +5,7 @@ import pickle
 import random
 import time
 from operator import itemgetter
+import logging
 
 import numpy as np
 from scipy.stats import binom
@@ -16,6 +17,8 @@ from .env_variables import ACCURACY_ESTIMATION_SAMPLE_NUM
 from .env_variables import ACTIVE_LEARNING_CANDIDATE_INDICES_NUM
 
 # Calculate the initial prior (alpha/beta) for an FD
+
+logger = logging.getLogger(__file__)
 
 
 def initialPrior(mu, variance):
@@ -141,11 +144,11 @@ def recordFeedback(data, feedback, project_id, current_iter,
     interaction_metadata['sample_history'].append(
         StudyMetric(iter_num=current_iter, value=[
             int(idx) for idx in feedback.keys()], elapsed_time=elapsed_time))
-    print('*** Latest feedback saved ***')
+    logger.info('*** Latest feedback saved ***')
 
     pickle.dump(interaction_metadata, open(
         './store/' + project_id + '/interaction_metadata.p', 'wb'))
-    print('*** Interaction metadata updates saved ***')
+    logger.info('*** Interaction metadata updates saved ***')
 
 
 # Interpret user feedback and update alphas and betas for each FD in the hypothesis space
@@ -164,7 +167,7 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
     elapsed_time = current_time - start_time
 
     # Remove marked cells from consideration
-    print('*** about to interpret feedback ***')
+    logger.info('*** about to interpret feedback ***')
     marked_rows = set()
     for idx in feedback.index:
         for col in feedback.columns:
@@ -211,7 +214,7 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
         fd_m.conf = fd_m.alpha / (fd_m.alpha + fd_m.beta)
         fd_m.conf_history.append(StudyMetric(
             iter_num=current_iter, value=fd_m.conf, elapsed_time=elapsed_time))
-        print(
+        logger.info(
             f'FD: {fd}, conf: {fd_m.conf}, alpha: {fd_m.alpha}, beta: {fd_m.beta}')
 
     '''Compute accuracy in Unserved dataset'''
@@ -224,10 +227,12 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
                                 model=model_dict,
                                 scenario_id=scenario_id,
                                 top_k=MODEL_FDS_TOP_K)
-    print("=============================================================================")
-    print(
+    logger.info(
+        "=============================================================================")
+    logger.info(
         f"Accuracy in {len(validation_indices)} unserved data: {round(accuracy,2)}")
-    print("=============================================================================")
+    logger.info(
+        "=============================================================================")
     study_metrics = json.load(
         open('./store/' + project_id + '/study_metrics.json', 'rb'))
     study_metrics['iter_accuracy'].append(accuracy)
@@ -257,7 +262,7 @@ def buildSample(data, sample_size, project_id,
 
     s_out = data.loc[s_index, :]
 
-    print('IDs of tuples in next sample:', s_out.index)
+    logger.info(f'IDs of tuples in next sample: {s_out.index}')
 
     return s_out
 
@@ -386,7 +391,7 @@ def compute_accuracy(indices, model, scenario_id, top_k):
     is_correct = [(prob > 0.5) and models_dict[scenario_id]["predictions"][idx]
                   for idx, prob in conditional_clean_probability_dict.items() if prob != 0.5]  # ignore indices with probability=0.5 as this means most probably, there wasn't any compliance and violations in the validation data for the tuple
 
-    print(conditional_clean_probability_dict)
+    logger.info(conditional_clean_probability_dict)
     accuracy = np.mean(is_correct)
 
     return accuracy

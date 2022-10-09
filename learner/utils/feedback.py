@@ -1,6 +1,7 @@
 import json
 import pickle
 import time
+import logging
 
 import pandas as pd
 from flask import request
@@ -12,6 +13,7 @@ from .helper import buildSample, interpretFeedback, StudyMetric, recordFeedback
 from .initialize_variables import processed_dfs
 
 console = Console()
+logger = logging.getLogger(__file__)
 
 
 class Feedback(Resource):
@@ -32,33 +34,33 @@ class Feedback(Resource):
         else:
             feedback_dict = json.loads(request.form.get('feedback'))
 
-        print(project_id)
-        console.log(current_user_h)
+        logger.info(project_id)
+        logger.info(current_user_h)
 
         feedback = pd.DataFrame.from_dict(feedback_dict, orient='index')
 
-        print('*** Necessary objects loaded ***')
+        logger.info('*** Necessary objects loaded ***')
 
         # Get the current iteration count and current time
         current_iter = pickle.load(
             open('./store/' + project_id + '/current_iter.p', 'rb'))
-        print(current_iter)
+        logger.info(current_iter)
         current_time = time.time()
 
-        print('*** Iteration counter updated ***')
+        logger.info('*** Iteration counter updated ***')
 
         # Get the project info
         with open('./store/' + project_id + '/project_info.json', 'r') as f:
             project_info = json.load(f)
         scenario_id = project_info['scenario_id']
-        print('*** Project info loaded ***')
+        logger.info('*** Project info loaded ***')
 
         data = processed_dfs[scenario_id]
-        print('*** Loaded dirty dataset ***')
+        logger.info('*** Loaded dirty dataset ***')
 
         # Record the user's feedback and analyze it
         s_in = data.loc[feedback.index]
-        print('*** Extracted sample from dataset ***')
+        logger.info('*** Extracted sample from dataset ***')
         recordFeedback(data, feedback_dict, project_id,
                        current_iter, current_time)
 
@@ -85,7 +87,7 @@ class Feedback(Resource):
                     open('./store/' + project_id + '/current_sample.p', 'wb'))
 
         s_out.insert(0, 'id', s_out.index, True)
-        print(s_out.index)
+        logger.info(s_out.index)
 
         # Build feedback map for front-end
         start_time = pickle.load(
@@ -111,7 +113,7 @@ class Feedback(Resource):
                         interaction_metadata['feedback_recent'][idx][
                             col])})
 
-        print('*** Feedback object created ***')
+        logger.info('*** Feedback object created ***')
 
         # Check if the scenario is done
         # if current_iter <= 5:

@@ -1,8 +1,7 @@
 import json
 import os
 import pickle
-from pprint import pprint
-
+import logging
 import pandas as pd
 from flask import request
 from flask_restful import Resource
@@ -13,6 +12,7 @@ import random
 from .env_variables import SAMPLING_METHOD
 
 console = Console()
+logger = logging.getLogger(__file__)
 
 
 class Import(Resource):
@@ -29,7 +29,7 @@ class Import(Resource):
         #     project_ids = [int(d, 0) for d in projects]
         #     new_project_id = '{:08x}'.format(max(project_ids) + 1)
 
-        new_project_id = SAMPLING_METHOD+"_"+str(random.randint(1,1e15))
+        new_project_id = SAMPLING_METHOD+"_"+str(random.randint(1, 1e15))
         new_project_dir = './store/' + new_project_id
 
         # Save the new project
@@ -39,11 +39,11 @@ class Import(Resource):
             returned_data = {
                 'msg': '[ERROR] Unable to create a directory for this project.'
             }
-            pprint(returned_data)
+            logger.info(returned_data)
             response = json.dumps(returned_data)
             return response, 500, {'Access-Control-Allow-Origin': '*'}
 
-        print('*** Project initialized ***')
+        logger.info('*** Project initialized ***')
 
         # Read the scenario number and initialize the scenario accordingly
         scenario_id = request.form.get('scenario_id')
@@ -59,7 +59,7 @@ class Import(Resource):
             skip_user = False if 'skip_user' not in json.loads(
                 request.data).keys() else json.loads(request.data)['skip_user']
 
-        console.log(initial_user_h)
+        logger.info(initial_user_h)
 
         if not skip_user:
             # Get the user from the users list
@@ -91,7 +91,7 @@ class Import(Resource):
         with open(new_project_dir + '/project_info.json', 'w') as f:
             json.dump(project_info, f, indent=4)
 
-        print('*** Project info saved ***')
+        logger.info('*** Project info saved ***')
 
         data = processed_dfs[scenario_id]
         header = [col for col in data.columns if col != 'is_clean']
@@ -129,7 +129,6 @@ class Import(Resource):
             # Calculate alpha and beta
             alpha, beta = initialPrior(mu, variance)
 
-
             # Initialize the FD metadata object
             fd_m = FDMeta(
                 fd=h,
@@ -137,9 +136,9 @@ class Import(Resource):
                 b=beta,
             )
 
-            print('iter: 0'),
-            print('alpha:', fd_m.alpha)
-            print('beta:', fd_m.beta)
+            logger.info('iter: 0'),
+            logger.info(f'alpha: {fd_m.alpha}')
+            logger.info(f'beta: {fd_m.beta}')
 
             fd_metadata[h] = fd_m
 
@@ -155,7 +154,7 @@ class Import(Resource):
         study_metrics['iter_accuracy'] = list()
         study_metrics['elapsed_time'] = list()
         json.dump(study_metrics,
-                    open(new_project_dir + '/study_metrics.json', 'w'))
+                  open(new_project_dir + '/study_metrics.json', 'w'))
 
         # Initialize tuple metadata and value metadata objects
         tuple_weights = dict()
@@ -176,7 +175,7 @@ class Import(Resource):
         pickle.dump(total_indices,
                     open(new_project_dir + '/unserved_indices.p', 'wb'))
 
-        print('*** Metadata and objects initialized and saved ***')
+        logger.info('*** Metadata and objects initialized and saved ***')
 
         # Return information to the user
         response = {
