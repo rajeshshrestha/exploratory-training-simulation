@@ -50,7 +50,7 @@ if __name__ == '__main__':
     # Scenario
     scenario_id = sys.argv[1] if sys.argv[1] is not None else 'omdb'
     trainer_type = sys.argv[
-        2]  # Bayesian type ("oracle", "informed", "uninformed", "random")
+        2]  # ['full-oracle', 'learning-oracle']
     decision_type = sys.argv[3]  # Decision type ("coin-flip" or "threshold")
     num_runs = int(sys.argv[4])  # How many runs of this simulation to do
     stat_calc = None if len(sys.argv) < 6 else sys.argv[

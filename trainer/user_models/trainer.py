@@ -1,16 +1,29 @@
 from .full_oracle import FullOracleTrainer
 from .uninformed_bayesian import UninformedBayesianTrainer
+from .learning_oracle import LearningOracleTrainer
 import re
 
 
 class TrainerModel:
-    def __init__(self, trainer_type, scenario_id, project_id, columns, **kwargs) -> None:
-        assert trainer_type in ['full-oracle', 'uninformed-bayesian']
+    def __init__(self, trainer_type,
+                 scenario_id,
+                 project_id,
+                 columns,
+                 **kwargs) -> None:
+        assert trainer_type in ['full-oracle',
+                                'learning-oracle',
+                                'uninformed-bayesian'], f"Invalid trainer type: {trainer_type}"
 
         if trainer_type == 'full-oracle':
             self.model = FullOracleTrainer(scenario_id=scenario_id,
                                            project_id=project_id,
                                            columns=columns)
+        elif trainer_type == 'learning-oracle':
+            self.model = LearningOracleTrainer(scenario_id=scenario_id,
+                                               project_id=project_id,
+                                               columns=columns,
+                                               initial_p=0.2,
+                                               p_step=0.1)
         elif trainer_type == 'uninformed-bayesian':
             self.model = UninformedBayesianTrainer(scenario_id=scenario_id,
                                                    project_id=project_id,
