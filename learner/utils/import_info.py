@@ -145,13 +145,16 @@ class Import(Resource):
         current_iter += 1
 
         study_metrics = dict()
-        study_metrics['iter_err_precision'] = list()
-        study_metrics['iter_err_recall'] = list()
-        study_metrics['iter_err_f1'] = list()
-        study_metrics['all_err_precision'] = list()
-        study_metrics['all_err_recall'] = list()
-        study_metrics['all_err_f1'] = list()
+        # study_metrics['iter_err_precision'] = list()
+        # study_metrics['iter_err_recall'] = list()
+        # study_metrics['iter_err_f1'] = list()
+        # study_metrics['all_err_precision'] = list()
+        # study_metrics['all_err_recall'] = list()
+        # study_metrics['all_err_f1'] = list()
         study_metrics['iter_accuracy'] = list()
+        study_metrics['iter_recall'] = list()
+        study_metrics['iter_precision'] = list()
+        study_metrics['iter_f1'] = list()
         study_metrics['elapsed_time'] = list()
         json.dump(study_metrics,
                   open(new_project_dir + '/study_metrics.json', 'w'))

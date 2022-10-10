@@ -214,19 +214,21 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
         fd_m.conf = fd_m.alpha / (fd_m.alpha + fd_m.beta)
         fd_m.conf_history.append(StudyMetric(
             iter_num=current_iter, value=fd_m.conf, elapsed_time=elapsed_time))
-        logger.info(
-            f'FD: {fd}, conf: {fd_m.conf}, alpha: {fd_m.alpha}, beta: {fd_m.beta}')
+        logger.info(f'FD: {fd}, conf: {fd_m.conf}, '
+                    f'alpha: {fd_m.alpha}, beta: {fd_m.beta}')
 
     '''Compute accuracy in Unserved dataset'''
     unserved_indices = pickle.load(
         open('./store/' + project_id + '/unserved_indices.p', 'rb'))  # whether to compute on all remaining unserved indices or sample from the remaining one
     model_dict = dict((fd, fd_m.conf)for fd, fd_m in fd_metadata.items())
-    validation_indices = np.random.choice(
-        list(unserved_indices), size=ACCURACY_ESTIMATION_SAMPLE_NUM, replace=False)
-    accuracy = compute_accuracy(indices=validation_indices,
-                                model=model_dict,
-                                scenario_id=scenario_id,
-                                top_k=MODEL_FDS_TOP_K)
+    validation_indices = np.random.choice(list(unserved_indices),
+                                          size=ACCURACY_ESTIMATION_SAMPLE_NUM,
+                                          replace=False)
+    accuracy, recall, precision, f1 = compute_metrics(
+        indices=validation_indices,
+        model=model_dict,
+        scenario_id=scenario_id,
+        top_k=MODEL_FDS_TOP_K)
     logger.info(
         "=============================================================================")
     logger.info(
@@ -236,6 +238,9 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
     study_metrics = json.load(
         open('./store/' + project_id + '/study_metrics.json', 'rb'))
     study_metrics['iter_accuracy'].append(accuracy)
+    study_metrics['iter_recall'].append(recall)
+    study_metrics['iter_precision'].append(precision)
+    study_metrics['iter_f1'].append(f1)
     study_metrics['elapsed_time'].append(elapsed_time)
     json.dump(study_metrics,
               open('./store/' + project_id + '/study_metrics.json', 'w'))
@@ -348,6 +353,13 @@ def returnActiveLearningTuples(sample_size, project_id,
         if len(s_out) >= sample_size:
             break
 
+    '''If insufficient sample remaining from top k entropy indices'''
+    remaining = sample_size-len(s_out)
+    if remaining > 0:
+        missing_ones = [idx for idx, entropy_value in sorted_entropy_items
+                        if idx not in s_out]
+        s_out |= set(missing_ones[:remaining])
+
     return list(s_out)
 
 
@@ -380,7 +392,7 @@ def get_average_cond_clean_prediction(indices, model, scenario_id):
     return conditional_clean_probability_dict
 
 
-def compute_accuracy(indices, model, scenario_id, top_k):
+def compute_metrics(indices, model, scenario_id, top_k):
     '''Pick top k fds if needed'''
     if 0 < top_k < len(model):
         model = dict(sorted(model.items(), key=itemgetter(1),
@@ -388,13 +400,29 @@ def compute_accuracy(indices, model, scenario_id, top_k):
 
     conditional_clean_probability_dict = get_average_cond_clean_prediction(
         indices=indices, model=model, scenario_id=scenario_id)
-    is_correct = [(prob > 0.5) and models_dict[scenario_id]["predictions"][idx]
-                  for idx, prob in conditional_clean_probability_dict.items() if prob != 0.5]  # ignore indices with probability=0.5 as this means most probably, there wasn't any compliance and violations in the validation data for the tuple
-
     logger.info(conditional_clean_probability_dict)
-    accuracy = np.mean(is_correct)
 
-    return accuracy
+    idxs = list(conditional_clean_probability_dict.keys())
+    is_dirty_true_labels = [not models_dict[scenario_id]["predictions"][idx]
+                            for idx in idxs]
+    is_dirty_predicted_labels = [conditional_clean_probability_dict[idx] < 0.5
+                                 for idx in idxs]
+    is_correct = [true_val == predicted_val for true_val, predicted_val
+                  in zip(is_dirty_true_labels, is_dirty_predicted_labels)]  # ignore indices with probability=0.5 as this means most probably, there wasn't any compliance and violations in the validation data for the tuple
+    true_positive = [true_val and predicted_val for true_val, predicted_val
+                     in zip(is_dirty_true_labels, is_dirty_predicted_labels)]
+
+    # print(set(is_correct))
+    # print(set(true_positive))
+    # print(set(is_dirty_true_labels))
+    # print(set(is_dirty_predicted_labels))
+
+    accuracy = np.mean(is_correct)
+    recall = sum(true_positive)/sum(is_dirty_true_labels)
+    precision = sum(true_positive)/sum(is_dirty_predicted_labels)
+    f1 = 2*recall*precision/(recall+precision)
+
+    return accuracy, recall, precision, f1
 
 
 def compute_entropy_values(indices, top_model_fds, scenario_id):

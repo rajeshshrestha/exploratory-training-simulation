@@ -10,3 +10,4 @@ new_scenarios.json
 **logs
 data/processed-data
 data/processed-exp-data/filtered_processed_scenarios.pk
+store-archive

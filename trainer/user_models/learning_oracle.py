@@ -32,5 +32,5 @@ class LearningOracleTrainer:
                     for rh in self.columns:
                         self.feedbackMap[row][rh] = True
 
-            '''Update p_val'''
-            self.p_val = min(self.p_val+self.p_step, 1.0)
+        '''Update p_val'''
+        self.p_val = min(self.p_val+self.p_step, 1.0)

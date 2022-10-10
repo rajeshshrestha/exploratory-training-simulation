@@ -22,8 +22,8 @@ class TrainerModel:
             self.model = LearningOracleTrainer(scenario_id=scenario_id,
                                                project_id=project_id,
                                                columns=columns,
-                                               initial_p=0.2,
-                                               p_step=0.1)
+                                               initial_p=0.1,
+                                               p_step=0.05)
         elif trainer_type == 'uninformed-bayesian':
             self.model = UninformedBayesianTrainer(scenario_id=scenario_id,
                                                    project_id=project_id,

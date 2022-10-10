@@ -7,7 +7,7 @@ import os
 import pickle as pk
 from copy import deepcopy
 
-setup_logging("./logs", log_level="INFO")
+setup_logging("./logs", log_level="ERROR")
 
 logger = logging.getLogger(__file__)
 

@@ -89,7 +89,10 @@ def send_feedback(project_id, feedback_dict):
                     elif type(data[row][j]) != 'str':
                         data[row][j] = str(data[row][j])
             return data, feedback, msg
+        else:
+            return None, None, msg
 
     except Exception as e:
         logger.error(e)
         msg = '[DONE]'
+        return None, None, msg
