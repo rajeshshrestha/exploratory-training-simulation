@@ -3,7 +3,7 @@ from utils.logger import setup_logging
 import logging
 import pickle as pk
 
-setup_logging("./logs")
+setup_logging("./logs", log_level='ERROR')
 
 logger = logging.getLogger(__file__)
 

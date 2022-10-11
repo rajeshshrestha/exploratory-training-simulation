@@ -125,10 +125,12 @@ class UninformedBayesianTrainer:
 
         is_dirty_predicted_dict = self.get_predictions(indices=data.keys())
 
+        logger.info(f"Previous feedback_dict: {self.feedbackMap}")
+
         for row in data.keys():
             stick_with_prediction = random.choices([True, False],
                                                    weights=[self.p_max,
-                                                            1-self.p_max])
+                                                            1-self.p_max])[0]
             if stick_with_prediction:
                 '''Mark dirty if predicted dirty based on the model'''
                 if is_dirty_predicted_dict[row]:
@@ -139,3 +141,5 @@ class UninformedBayesianTrainer:
                 if not is_dirty_predicted_dict[row]:
                     for rh in self.columns:
                         self.feedbackMap[row][rh] = True
+
+        logger.info(f"Later feedback_dict: {self.feedbackMap}")

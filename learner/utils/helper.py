@@ -176,6 +176,7 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
                 break
 
     # Calculate P(X | \theta_h) for each FD
+    mae_model_error = 0
     for fd, fd_m in fd_metadata.items():
         successes = 0  # number of tuples that are not in a violation of this FD in the sample
         failures = 0  # number of tuples that ARE in a violation of this FD in the sample
@@ -216,13 +217,19 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
             iter_num=current_iter, value=fd_m.conf, elapsed_time=elapsed_time))
         logger.info(f'FD: {fd}, conf: {fd_m.conf}, '
                     f'alpha: {fd_m.alpha}, beta: {fd_m.beta}')
+        # print(f'FD: {fd}, conf: {fd_m.conf}, '
+        #       f"true_conf: {models_dict['omdb']['model'][fd]}")
+        mae_model_error += abs(fd_m.conf - models_dict['omdb']['model'][fd])
+
+    print(f"MAE Model Conf Error: {mae_model_error}")
 
     '''Compute accuracy in Unserved dataset'''
     unserved_indices = pickle.load(
         open('./store/' + project_id + '/unserved_indices.p', 'rb'))  # whether to compute on all remaining unserved indices or sample from the remaining one
     model_dict = dict((fd, fd_m.conf)for fd, fd_m in fd_metadata.items())
     validation_indices = np.random.choice(list(unserved_indices),
-                                          size=ACCURACY_ESTIMATION_SAMPLE_NUM,
+                                          size=min(len(unserved_indices),
+                                          ACCURACY_ESTIMATION_SAMPLE_NUM),
                                           replace=False)
     accuracy, recall, precision, f1 = compute_metrics(
         indices=validation_indices,
@@ -241,6 +248,7 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
     study_metrics['iter_recall'].append(recall)
     study_metrics['iter_precision'].append(precision)
     study_metrics['iter_f1'].append(f1)
+    study_metrics['iter_mae_model_error'].append(mae_model_error)
     study_metrics['elapsed_time'].append(elapsed_time)
     json.dump(study_metrics,
               open('./store/' + project_id + '/study_metrics.json', 'w'))

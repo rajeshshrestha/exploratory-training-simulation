@@ -16,11 +16,10 @@ class LearningOracleTrainer:
         self.p_step = p_step
 
     def update_feedback_map(self, data):
-        # Decide for each row whether to mark or not
         for row in data.keys():
             is_prediction_correct = random.choices([True, False],
                                                    weights=[self.p_val,
-                                                            1-self.p_val])
+                                                            1-self.p_val])[0]
             if is_prediction_correct:
                 '''Mark dirty if not found clean in the model dict'''
                 if not models_dict[self.scenario_id]["predictions"][row]:

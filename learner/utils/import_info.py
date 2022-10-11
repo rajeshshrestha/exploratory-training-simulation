@@ -155,6 +155,7 @@ class Import(Resource):
         study_metrics['iter_recall'] = list()
         study_metrics['iter_precision'] = list()
         study_metrics['iter_f1'] = list()
+        study_metrics['iter_mae_model_error'] =  list()
         study_metrics['elapsed_time'] = list()
         json.dump(study_metrics,
                   open(new_project_dir + '/study_metrics.json', 'w'))

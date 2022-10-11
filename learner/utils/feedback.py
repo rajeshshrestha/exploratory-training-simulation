@@ -61,6 +61,7 @@ class Feedback(Resource):
         # Record the user's feedback and analyze it
         s_in = data.loc[feedback.index]
         logger.info('*** Extracted sample from dataset ***')
+        logger.info(feedback_dict)
         recordFeedback(data, feedback_dict, project_id,
                        current_iter, current_time)
 
