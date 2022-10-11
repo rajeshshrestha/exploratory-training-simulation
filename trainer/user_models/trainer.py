@@ -27,7 +27,11 @@ class TrainerModel:
         elif trainer_type == 'uninformed-bayesian':
             self.model = UninformedBayesianTrainer(scenario_id=scenario_id,
                                                    project_id=project_id,
-                                                   columns=columns)
+                                                   columns=columns,
+                                                   p_max=0.9,
+                                                   alpha=1,
+                                                   beta=1,
+                                                   top_k=10)
 
         '''Save columns on the data except the id column'''
         self.columns = columns
