@@ -2,14 +2,12 @@ import json
 import os
 import pickle
 import logging
-import pandas as pd
 from flask import request
 from flask_restful import Resource
 from rich.console import Console
 from .initialize_variables import scenarios, processed_dfs
 from .helper import StudyMetric, FDMeta, initialPrior
 import random
-from .env_variables import SAMPLING_METHOD
 
 console = Console()
 logger = logging.getLogger(__file__)
@@ -29,7 +27,27 @@ class Import(Resource):
         #     project_ids = [int(d, 0) for d in projects]
         #     new_project_id = '{:08x}'.format(max(project_ids) + 1)
 
-        new_project_id = SAMPLING_METHOD+"_"+str(random.randint(1, 1e15))
+        # Read the scenario number and initialize the scenario accordingly
+        scenario_id = request.form.get('scenario_id')
+        email = request.form.get('email')
+        initial_user_h = request.form.get('initial_fd')
+        fd_comment = request.form.get('fd_comment')
+        skip_user = request.form.get('skip_user')
+        sampling_method = request.form.get('sampling_method')
+        trainer_type = request.form.get('trainer_type')
+        if scenario_id is None or email is None:
+            scenario_id = json.loads(request.data)['scenario_id']
+            email = json.loads(request.data)['email']
+            initial_user_h = json.loads(request.data)['initial_fd']
+            fd_comment = json.loads(request.data)['fd_comment']
+            skip_user = False if 'skip_user' not in json.loads(
+                request.data).keys() else json.loads(request.data)['skip_user']
+            sampling_method = json.loads(request.data)['sampling_type']
+            trainer_type = json.load(request.data)['trainer_type']
+        logger.info(initial_user_h)
+
+        new_project_id = trainer_type + "_" + sampling_method + \
+            "_"+str(random.randint(1, 1e15))
         new_project_dir = './store/' + new_project_id
 
         # Save the new project
@@ -44,22 +62,6 @@ class Import(Resource):
             return response, 500, {'Access-Control-Allow-Origin': '*'}
 
         logger.info('*** Project initialized ***')
-
-        # Read the scenario number and initialize the scenario accordingly
-        scenario_id = request.form.get('scenario_id')
-        email = request.form.get('email')
-        initial_user_h = request.form.get('initial_fd')
-        fd_comment = request.form.get('fd_comment')
-        skip_user = request.form.get('skip_user')
-        if scenario_id is None or email is None:
-            scenario_id = json.loads(request.data)['scenario_id']
-            email = json.loads(request.data)['email']
-            initial_user_h = json.loads(request.data)['initial_fd']
-            fd_comment = json.loads(request.data)['fd_comment']
-            skip_user = False if 'skip_user' not in json.loads(
-                request.data).keys() else json.loads(request.data)['skip_user']
-
-        logger.info(initial_user_h)
 
         if not skip_user:
             # Get the user from the users list
@@ -86,6 +88,8 @@ class Import(Resource):
         project_info = {
             'email': email,
             'scenario_id': scenario_id,
+            'sampling_method': sampling_method,
+            'trainer_type': trainer_type
         }
 
         with open(new_project_dir + '/project_info.json', 'w') as f:
@@ -155,7 +159,7 @@ class Import(Resource):
         study_metrics['iter_recall'] = list()
         study_metrics['iter_precision'] = list()
         study_metrics['iter_f1'] = list()
-        study_metrics['iter_mae_model_error'] =  list()
+        study_metrics['iter_mae_model_error'] = list()
         study_metrics['elapsed_time'] = list()
         json.dump(study_metrics,
                   open(new_project_dir + '/study_metrics.json', 'w'))

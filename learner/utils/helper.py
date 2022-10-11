@@ -221,7 +221,7 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
         #       f"true_conf: {models_dict['omdb']['model'][fd]}")
         mae_model_error += abs(fd_m.conf - models_dict['omdb']['model'][fd])
 
-    print(f"MAE Model Conf Error: {mae_model_error}")
+    logger.info(f"MAE Model Conf Error: {mae_model_error}")
 
     '''Compute accuracy in Unserved dataset'''
     unserved_indices = pickle.load(

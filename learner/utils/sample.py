@@ -7,7 +7,7 @@ from flask import request
 from flask_restful import Resource
 from rich.console import Console
 
-from .env_variables import SAMPLING_METHOD, RESAMPLE, SAMPLE_SIZE
+from .env_variables import RESAMPLE, SAMPLE_SIZE
 from .helper import buildSample
 from .initialize_variables import processed_dfs
 
@@ -28,6 +28,7 @@ class Sample(Resource):
 
         with open('./store/' + project_id + '/project_info.json') as f:
             project_info = json.load(f)
+            sampling_method = project_info['sampling_method']
         scenario_id = project_info['scenario_id']
 
         # Calculate the start time of the interaction
@@ -41,7 +42,7 @@ class Sample(Resource):
 
         # Build sample
         s_out = buildSample(data, SAMPLE_SIZE, project_id,
-                            sampling_method=SAMPLING_METHOD,
+                            sampling_method=sampling_method,
                             resample=RESAMPLE)
         s_index = s_out.index
 

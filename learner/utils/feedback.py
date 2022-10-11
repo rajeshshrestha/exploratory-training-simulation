@@ -8,7 +8,7 @@ from flask import request
 from flask_restful import Resource
 from rich.console import Console
 
-from .env_variables import SAMPLING_METHOD, TOTAL_ITERATIONS, RESAMPLE, SAMPLE_SIZE
+from .env_variables import TOTAL_ITERATIONS, RESAMPLE, SAMPLE_SIZE
 from .helper import buildSample, interpretFeedback, StudyMetric, recordFeedback
 from .initialize_variables import processed_dfs
 
@@ -52,6 +52,7 @@ class Feedback(Resource):
         # Get the project info
         with open('./store/' + project_id + '/project_info.json', 'r') as f:
             project_info = json.load(f)
+            sampling_method = project_info['sampling_method']
         scenario_id = project_info['scenario_id']
         logger.info('*** Project info loaded ***')
 
@@ -72,7 +73,7 @@ class Feedback(Resource):
         current_iter += 1
         s_out = buildSample(data, SAMPLE_SIZE,
                             project_id,
-                            sampling_method=SAMPLING_METHOD,
+                            sampling_method=sampling_method,
                             resample=RESAMPLE)
         s_index = s_out.index
 

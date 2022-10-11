@@ -9,10 +9,12 @@ from utils.interact_learner import send_feedback
 from user_models.trainer import TrainerModel
 
 
-def run(scenario_id, trainer_type):
+def run(scenario_id, trainer_type, sampling_method):
 
     # Initialize the learner
-    project_id, _ = initialize_learner(scenario_id=scenario_id)
+    project_id, _ = initialize_learner(scenario_id=scenario_id,
+                                       sampling_method=sampling_method,
+                                       trainer_type=trainer_type)
 
     # Get the first batch of sample from the learner
     data, columns, feedback = get_initial_sample(project_id=project_id)
@@ -50,14 +52,21 @@ if __name__ == '__main__':
     # Scenario
     scenario_id = sys.argv[1] if sys.argv[1] is not None else 'omdb'
     trainer_type = sys.argv[
-        2]  # ['full-oracle', 'learning-oracle']
-    decision_type = sys.argv[3]  # Decision type ("coin-flip" or "threshold")
+        2]
+    sampling_method = sys.argv[3]
     num_runs = int(sys.argv[4])  # How many runs of this simulation to do
-    stat_calc = None if len(sys.argv) < 6 else sys.argv[
-        5]  # Are we evaluating precision or recall?
+
+    assert trainer_type in ['full-oracle',
+                            'learning-oracle',
+                            'uninformed-bayesian'],\
+        "Invalid trainer type passed!!!"
+    assert sampling_method in ['RANDOM', 'ACTIVELR'],\
+        "Invalid sampling method passed!!!"
 
     cpu_num = os.cpu_count()
 
     with Pool(10) as p:
-        p.map(partial(run, trainer_type=trainer_type),
+        p.map(partial(run,
+                      trainer_type=trainer_type,
+                      sampling_method=sampling_method),
               [scenario_id for i in range(num_runs)])
