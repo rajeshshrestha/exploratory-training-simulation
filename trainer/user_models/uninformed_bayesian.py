@@ -137,9 +137,9 @@ class UninformedBayesianTrainer:
                     for rh in self.columns:
                         self.feedbackMap[row][rh] = True
             else:
-                '''Mark dirty if predicted as clean by the model'''
-                if not is_dirty_predicted_dict[row]:
-                    for rh in self.columns:
-                        self.feedbackMap[row][rh] = True
+                '''Mark randomly'''
+                label = random.choices([True, False])[0]
+                for rh in self.columns:
+                    self.feedbackMap[row][rh] = label
 
         logger.info(f"Later feedback_dict: {self.feedbackMap}")
