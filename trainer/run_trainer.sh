@@ -1,3 +1,4 @@
+#!/bin/bash
 RUNS=50
 python simulate.py omdb full-oracle RANDOM $RUNS;
 python simulate.py omdb learning-oracle RANDOM $RUNS;
