@@ -1,5 +1,5 @@
 #!/bin/bash
-RUNS=50
+RUNS=20
 python simulate.py omdb full-oracle RANDOM $RUNS;
 python simulate.py omdb learning-oracle RANDOM $RUNS;
 python simulate.py omdb uninformed-bayesian RANDOM $RUNS;

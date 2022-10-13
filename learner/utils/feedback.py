@@ -43,7 +43,7 @@ class Feedback(Resource):
 
         # Get the current iteration count and current time
         current_iter = pickle.load(
-            open('./store/' + project_id + '/current_iter.p', 'rb'))
+            open('./store/' + project_id + '/current_iter.pk', 'rb'))
         logger.info(current_iter)
         current_time = time.time()
 
@@ -79,31 +79,31 @@ class Feedback(Resource):
 
         # open file containing the indices of unserved tuples, update it and dump
         unserved_indices = pickle.load(
-            open('./store/' + project_id + '/unserved_indices.p', 'rb'))
+            open('./store/' + project_id + '/unserved_indices.pk', 'rb'))
         unserved_indices = (set(unserved_indices) - set(s_index))
         pickle.dump(unserved_indices,
-                    open('./store/' + project_id + '/unserved_indices.p',
+                    open('./store/' + project_id + '/unserved_indices.pk',
                          'wb'))
 
         pickle.dump(s_index,
-                    open('./store/' + project_id + '/current_sample.p', 'wb'))
+                    open('./store/' + project_id + '/current_sample.pk', 'wb'))
 
         s_out.insert(0, 'id', s_out.index, True)
         logger.info(s_out.index)
 
         # Build feedback map for front-end
         start_time = pickle.load(
-            open('./store/' + project_id + '/start_time.p', 'rb'))
+            open('./store/' + project_id + '/start_time.pk', 'rb'))
         elapsed_time = current_time - start_time
         feedback = list()
         interaction_metadata = pickle.load(
-            open('./store/' + project_id + '/interaction_metadata.p', 'rb'))
+            open('./store/' + project_id + '/interaction_metadata.pk', 'rb'))
         interaction_metadata['user_hypothesis_history'].append(
             StudyMetric(iter_num=current_iter - 1,
                         value=[current_user_h, user_h_comment],
                         elapsed_time=elapsed_time))  # current iter - 1 because it's for the prev iter (i.e. before incrementing current_iter)
         pickle.dump(interaction_metadata,
-                    open('./store/' + project_id + '/interaction_metadata.p',
+                    open('./store/' + project_id + '/interaction_metadata.pk',
                          'wb'))
 
         for idx in s_out.index:
@@ -129,7 +129,7 @@ class Feedback(Resource):
 
         # Save object updates
         pickle.dump(current_iter,
-                    open('./store/' + project_id + '/current_iter.p', 'wb'))
+                    open('./store/' + project_id + '/current_iter.pk', 'wb'))
         with open('./store/' + project_id + '/project_info.json', 'w') as f:
             json.dump(project_info, f)
 

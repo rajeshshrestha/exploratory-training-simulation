@@ -12,6 +12,7 @@ from scipy.stats import binom
 from .initialize_variables import processed_dfs
 from .initialize_variables import scenarios
 from .initialize_variables import models_dict
+from .initialize_variables import validation_indices_dict
 from .env_variables import MODEL_FDS_TOP_K
 from .env_variables import ACCURACY_ESTIMATION_SAMPLE_NUM
 from .env_variables import ACTIVE_LEARNING_CANDIDATE_INDICES_NUM
@@ -122,10 +123,10 @@ class CellFeedback(object):
 def recordFeedback(data, feedback, project_id, current_iter,
                    current_time):
     interaction_metadata = pickle.load(
-        open('./store/' + project_id + '/interaction_metadata.p', 'rb'))
+        open('./store/' + project_id + '/interaction_metadata.pk', 'rb'))
     # study_metrics = json.load( open('./store/' + project_id + '/study_metrics.json', 'r') )
     start_time = pickle.load(
-        open('./store/' + project_id + '/start_time.p', 'rb'))
+        open('./store/' + project_id + '/start_time.pk', 'rb'))
 
     # Calculate elapsed time
     elapsed_time = current_time - start_time
@@ -147,7 +148,7 @@ def recordFeedback(data, feedback, project_id, current_iter,
     logger.info('*** Latest feedback saved ***')
 
     pickle.dump(interaction_metadata, open(
-        './store/' + project_id + '/interaction_metadata.p', 'wb'))
+        './store/' + project_id + '/interaction_metadata.pk', 'wb'))
     logger.info('*** Interaction metadata updates saved ***')
 
 
@@ -157,9 +158,9 @@ def recordFeedback(data, feedback, project_id, current_iter,
 def interpretFeedback(s_in, feedback, project_id, current_iter,
                       current_time):
     fd_metadata = pickle.load(
-        open('./store/' + project_id + '/fd_metadata.p', 'rb'))
+        open('./store/' + project_id + '/fd_metadata.pk', 'rb'))
     start_time = pickle.load(
-        open('./store/' + project_id + '/start_time.p', 'rb'))
+        open('./store/' + project_id + '/start_time.pk', 'rb'))
     with open('./store/' + project_id + '/project_info.json', 'r') as f:
         project_info = json.load(f)
         scenario_id = project_info['scenario_id']
@@ -224,22 +225,17 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
     logger.info(f"MAE Model Conf Error: {mae_model_error}")
 
     '''Compute accuracy in Unserved dataset'''
-    unserved_indices = pickle.load(
-        open('./store/' + project_id + '/unserved_indices.p', 'rb'))  # whether to compute on all remaining unserved indices or sample from the remaining one
     model_dict = dict((fd, fd_m.conf)for fd, fd_m in fd_metadata.items())
-    validation_indices = np.random.choice(list(unserved_indices),
-                                          size=min(len(unserved_indices),
-                                          ACCURACY_ESTIMATION_SAMPLE_NUM),
-                                          replace=False)
+    val_idxs = validation_indices_dict[scenario_id]
     accuracy, recall, precision, f1 = compute_metrics(
-        indices=validation_indices,
+        indices=val_idxs,
         model=model_dict,
         scenario_id=scenario_id,
         top_k=MODEL_FDS_TOP_K)
     logger.info(
         "=============================================================================")
     logger.info(
-        f"Accuracy in {len(validation_indices)} unserved data: {round(accuracy,2)}")
+        f"Accuracy in {len(val_idxs)} unserved data: {round(accuracy,2)}")
     logger.info(
         "=============================================================================")
     study_metrics = json.load(
@@ -255,7 +251,7 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
 
     # Save updated alpha/beta metrics
     pickle.dump(fd_metadata, open(
-        './store/' + project_id + '/fd_metadata.p', 'wb'))
+        './store/' + project_id + '/fd_metadata.pk', 'wb'))
 
 
 # Build a sample
@@ -294,7 +290,7 @@ def returnRandomSamples(sample_size, project_id, resample=False):
 
     else:
         unserved_indices = pickle.load(
-            open('./store/' + project_id + '/unserved_indices.p', 'rb'))
+            open('./store/' + project_id + '/unserved_indices.pk', 'rb'))
         s_out = random.sample(list(unserved_indices), min(
             len(unserved_indices), sample_size))
 
@@ -306,10 +302,10 @@ def returnActiveLearningTuples(sample_size, project_id,
                                resample=False):
     '''Read current fd metadata of the project'''
     fd_metadata = pickle.load(
-        open('./store/' + project_id + '/fd_metadata.p', 'rb'))
+        open('./store/' + project_id + '/fd_metadata.pk', 'rb'))
 
     unserved_indices = pickle.load(
-        open('./store/' + project_id + '/unserved_indices.p', 'rb'))
+        open('./store/' + project_id + '/unserved_indices.pk', 'rb'))
 
     '''Subsample candiate unserved indices'''
     if ACTIVE_LEARNING_CANDIDATE_INDICES_NUM > 0:

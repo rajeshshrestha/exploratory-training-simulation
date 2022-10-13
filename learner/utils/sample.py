@@ -34,7 +34,7 @@ class Sample(Resource):
         # Calculate the start time of the interaction
         start_time = time.time()
         pickle.dump(start_time,
-                    open('./store/' + project_id + '/start_time.p', 'wb'))
+                    open('./store/' + project_id + '/start_time.pk', 'wb'))
 
         logger.info('*** Project info loaded ***')
 
@@ -48,14 +48,14 @@ class Sample(Resource):
 
         # open file containing the indices of unserved tuples, update it and dump
         unserved_indices = pickle.load(
-            open('./store/' + project_id + '/unserved_indices.p', 'rb'))
+            open('./store/' + project_id + '/unserved_indices.pk', 'rb'))
         unserved_indices = (set(unserved_indices) - set(s_index))
         pickle.dump(unserved_indices,
-                    open('./store/' + project_id + '/unserved_indices.p',
+                    open('./store/' + project_id + '/unserved_indices.pk',
                          'wb'))
 
         pickle.dump(s_index,
-                    open('./store/' + project_id + '/current_sample.p', 'wb'))
+                    open('./store/' + project_id + '/current_sample.pk', 'wb'))
 
         # Add ID to s_out (for use on frontend)
         s_out.insert(0, 'id', s_out.index, True)

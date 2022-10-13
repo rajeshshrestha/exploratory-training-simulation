@@ -5,7 +5,7 @@ import logging
 from flask import request
 from flask_restful import Resource
 from rich.console import Console
-from .initialize_variables import scenarios, processed_dfs
+from .initialize_variables import scenarios, processed_dfs, validation_indices_dict
 from .helper import StudyMetric, FDMeta, initialPrior
 import random
 
@@ -66,7 +66,7 @@ class Import(Resource):
         if not skip_user:
             # Get the user from the users list
             try:
-                users = pickle.load(open('./study-utils/users.p', 'rb'))
+                users = pickle.load(open('./study-utils/users.pk', 'rb'))
             except Exception as e:
                 return {'msg': '[ERROR] users does not exist'}, 400, {
                     'Access-Control-Allow-Origin': '*'}
@@ -83,7 +83,7 @@ class Import(Resource):
             users[email] = user
 
             # Save the users object updates
-            pickle.dump(users, open('./study-utils/users.p', 'wb'))
+            pickle.dump(users, open('./study-utils/users.pk', 'wb'))
 
         project_info = {
             'email': email,
@@ -171,17 +171,17 @@ class Import(Resource):
             tuple_weights[idx] = 1 / len(data)
 
         pickle.dump(interaction_metadata,
-                    open(new_project_dir + '/interaction_metadata.p', 'wb'))
+                    open(new_project_dir + '/interaction_metadata.pk', 'wb'))
         pickle.dump(tuple_weights,
-                    open(new_project_dir + '/tuple_weights.p', 'wb'))
+                    open(new_project_dir + '/tuple_weights.pk', 'wb'))
         pickle.dump(fd_metadata,
-                    open(new_project_dir + '/fd_metadata.p', 'wb'))
+                    open(new_project_dir + '/fd_metadata.pk', 'wb'))
         pickle.dump(current_iter,
-                    open(new_project_dir + '/current_iter.p', 'wb'))
+                    open(new_project_dir + '/current_iter.pk', 'wb'))
 
-        total_indices = set(data.index)
+        total_indices = set(data.index) - validation_indices_dict[scenario_id]
         pickle.dump(total_indices,
-                    open(new_project_dir + '/unserved_indices.p', 'wb'))
+                    open(new_project_dir + '/unserved_indices.pk', 'wb'))
 
         logger.info('*** Metadata and objects initialized and saved ***')
 
