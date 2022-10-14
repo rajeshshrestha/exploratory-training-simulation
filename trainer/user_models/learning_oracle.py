@@ -51,6 +51,9 @@ class LearningOracleTrainer:
                 'p_val_history': self.p_val_history
                 }
 
+    def get_model_conf_dict(self):
+        return models_dict[self.scenario_id]["model"]
+
     def save(self):
         with open(os.path.join(self.trainer_store_path, 'model.json'),
                   'w') as fp:

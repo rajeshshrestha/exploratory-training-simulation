@@ -70,3 +70,6 @@ class TrainerModel:
             feedback_dict[data[f]['id']] = self.model.feedbackMap[f]
 
         return feedback_dict
+
+    def get_model(self):
+        return self.model.get_model_conf_dict()

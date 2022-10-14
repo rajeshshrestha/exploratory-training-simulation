@@ -66,6 +66,9 @@ class UninformedBayesianTrainer:
         return dict((fd, fd_metadata.to_dict())
                     for fd, fd_metadata in self.fd_metadata.items())
 
+    def get_model_conf_dict(self):
+        return dict((fd, self.fd_metadata[fd].conf) for fd in self.fd_metadata)
+
     def save(self):
         with open(os.path.join(self.trainer_store_path,
                                'model.json'), 'w') as fp:

@@ -156,7 +156,7 @@ def recordFeedback(data, feedback, project_id, current_iter,
 
 
 def interpretFeedback(s_in, feedback, project_id, current_iter,
-                      current_time):
+                      current_time, trainer_model=None):
     fd_metadata = pickle.load(
         open('./store/' + project_id + '/fd_metadata.pk', 'rb'))
     start_time = pickle.load(
@@ -177,7 +177,8 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
                 break
 
     # Calculate P(X | \theta_h) for each FD
-    mae_model_error = 0
+    mae_ground_model_error = 0
+    mae_trainer_model_error = 0
     for fd, fd_m in fd_metadata.items():
         successes = 0  # number of tuples that are not in a violation of this FD in the sample
         failures = 0  # number of tuples that ARE in a violation of this FD in the sample
@@ -229,9 +230,14 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
                     f'alpha: {fd_m.alpha}, beta: {fd_m.beta}')
         # print(f'FD: {fd}, conf: {fd_m.conf}, '
         #       f"true_conf: {models_dict['omdb']['model'][fd]}")
-        mae_model_error += abs(fd_m.conf - models_dict['omdb']['model'][fd])
+        mae_ground_model_error += abs(fd_m.conf -
+                                      models_dict[scenario_id]['model'][fd])
+        if trainer_model is not None:
+            mae_trainer_model_error += abs(fd_m.conf - trainer_model[fd])
 
-    logger.info(f"MAE Model Conf Error: {mae_model_error}")
+    logger.info(f"MAE Ground Model Conf Error: {mae_ground_model_error}")
+    if trainer_model is not None:
+        logger.info(f"MAE Trainer Model Conf Error: {mae_trainer_model_error}")
 
     '''Compute accuracy in Unserved dataset'''
     model_dict = dict((fd, fd_m.conf)for fd, fd_m in fd_metadata.items())
@@ -253,8 +259,12 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
     study_metrics['iter_recall'].append(recall)
     study_metrics['iter_precision'].append(precision)
     study_metrics['iter_f1'].append(f1)
-    study_metrics['iter_mae_model_error'].append(mae_model_error)
     study_metrics['elapsed_time'].append(elapsed_time)
+    study_metrics['iter_mae_ground_model_error'].append(mae_ground_model_error)
+    if trainer_model is not None:
+        study_metrics['iter_mae_trainer_model_error'].append(
+            mae_trainer_model_error)
+
     json.dump(study_metrics,
               open('./store/' + project_id + '/study_metrics.json', 'w'))
 

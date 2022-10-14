@@ -62,7 +62,7 @@ def get_initial_sample(project_id):
         raise Exception(e)
 
 
-def send_feedback(project_id, feedback_dict):
+def send_feedback(project_id, feedback_dict, model_dict):
 
     formData = {
         'project_id': project_id,
@@ -70,6 +70,7 @@ def send_feedback(project_id, feedback_dict):
         'current_user_h': 'Not Sure',
         # TODO: Hypothesize an FD in the simulation in each iteration
         'user_h_comment': '',
+        'trainer_model': json.dumps(model_dict)
     }
 
     try:

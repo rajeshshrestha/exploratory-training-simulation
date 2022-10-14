@@ -34,8 +34,11 @@ def run(scenario_id, trainer_type, sampling_method):
 
         feedback_dict = trainer.get_feedback_dict(data, feedback)
 
+        '''Get Model FD conf dict for metric computation on learner side'''
+        model_dict = trainer.get_model()
         data, feedback, msg = send_feedback(project_id=project_id,
-                                            feedback_dict=feedback_dict)
+                                            feedback_dict=feedback_dict,
+                                            model_dict=model_dict)
 
 
 if __name__ == '__main__':

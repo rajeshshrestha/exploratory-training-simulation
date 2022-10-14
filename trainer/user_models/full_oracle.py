@@ -25,6 +25,9 @@ class FullOracleTrainer:
                 for rh in self.columns:
                     self.feedbackMap[row][rh] = True
 
+    def get_model_conf_dict(self):
+        return models_dict[self.scenario_id]["model"]
+
     def save(self):
         '''Nothing to do here'''
         pass

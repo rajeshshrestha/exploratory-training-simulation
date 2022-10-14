@@ -31,8 +31,10 @@ class Feedback(Resource):
             feedback_dict = req['feedback']
             current_user_h = req['current_user_h']
             user_h_comment = req['user_h_comment']
+            trainer_model = req['trainer_model']
         else:
             feedback_dict = json.loads(request.form.get('feedback'))
+            trainer_model = json.loads(request.form.get('trainer_model'))
 
         logger.info(project_id)
         logger.info(current_user_h)
@@ -67,7 +69,8 @@ class Feedback(Resource):
                        current_iter, current_time)
 
         interpretFeedback(s_in, feedback, project_id,
-                          current_iter, current_time)
+                          current_iter, current_time,
+                          trainer_model=trainer_model)
 
         # Build a new sample
         current_iter += 1
