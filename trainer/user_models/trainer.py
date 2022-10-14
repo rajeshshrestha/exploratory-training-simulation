@@ -8,8 +8,7 @@ class TrainerModel:
     def __init__(self, trainer_type,
                  scenario_id,
                  project_id,
-                 columns,
-                 **kwargs) -> None:
+                 columns) -> None:
         assert trainer_type in ['full-oracle',
                                 'learning-oracle',
                                 'uninformed-bayesian'], f"Invalid trainer type: {trainer_type}"
@@ -39,6 +38,12 @@ class TrainerModel:
         self.scenario_id = scenario_id
         self.project_id = project_id
 
+        '''Save initial model'''
+        self.save_model()
+
+    def save_model(self):
+        self.model.save()
+
     def buildFeedbackMap(self, data, feedback):
         feedbackMap = dict()
         for row in data.keys():
@@ -58,6 +63,7 @@ class TrainerModel:
 
         self.buildFeedbackMap(data=data, feedback=feedback)
         self.model.update_feedback_map(data=data)
+        self.save_model()
 
         feedback_dict = dict()
         for f in self.model.feedbackMap.keys():

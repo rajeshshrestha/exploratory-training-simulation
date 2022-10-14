@@ -1,5 +1,9 @@
+import os
 from .initialize_variables import models_dict
 import random
+import json
+
+current_path = os.path.dirname(os.path.realpath(__file__))
 
 
 class LearningOracleTrainer:
@@ -14,6 +18,12 @@ class LearningOracleTrainer:
         '''Initial correct probability and step size for its improvement'''
         self.p_val = initial_p
         self.p_step = p_step
+        self.p_val_history = [self.p_val]
+
+        '''Create directory for storing model'''
+        self.trainer_store_path = os.path.join(os.path.dirname(
+            current_path), "trainer-store", self.project_id)
+        os.makedirs(self.trainer_store_path)
 
     def update_feedback_map(self, data):
         for row in data.keys():
@@ -33,3 +43,15 @@ class LearningOracleTrainer:
 
         '''Update p_val'''
         self.p_val = min(self.p_val+self.p_step, 1.0)
+        self.p_val_history.append(self.p_val)
+
+    def get_model_dict(self):
+        return {'p_val': self.p_val,
+                'p_step': self.p_step,
+                'p_val_history': self.p_val_history
+                }
+
+    def save(self):
+        with open(os.path.join(self.trainer_store_path, 'model.json'),
+                  'w') as fp:
+            json.dump(self.get_model_dict(), fp)

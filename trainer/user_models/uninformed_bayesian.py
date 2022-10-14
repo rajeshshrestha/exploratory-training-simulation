@@ -6,8 +6,11 @@ from operator import itemgetter
 import logging
 import random
 from statistics import mean
+import os
+import json
 
 logger = logging.getLogger(__file__)
+current_path = os.path.dirname(os.path.realpath(__file__))
 
 
 class FDMeta:
@@ -17,6 +20,7 @@ class FDMeta:
     """
 
     def __init__(self, fd, alpha, beta):
+        self.fd = fd
         self.lhs = fd.split(' => ')[0][1:-1].split(', ')
         self.rhs = fd.split(' => ')[1].split(', ')
         self.alpha = alpha
@@ -24,6 +28,18 @@ class FDMeta:
         self.beta = beta
         self.beta_history = [beta]
         self.conf = (alpha / (alpha+beta))
+
+    def to_dict(self):
+        return {
+            'fd': self.fd,
+            'lhs': self.lhs,
+            'rhs': self.rhs,
+            'alpha': self.alpha,
+            'beta': self.beta,
+            'conf': self.conf,
+            'alpha_history': self.alpha_history,
+            'beta_history': self.beta_history
+        }
 
 
 class UninformedBayesianTrainer:
@@ -40,6 +56,20 @@ class UninformedBayesianTrainer:
 
         self.fd_metadata = dict((fd, FDMeta(fd=fd, alpha=alpha, beta=beta))
                                 for fd in required_fds[self.scenario_id])
+
+        '''Create directory for storing model'''
+        self.trainer_store_path = os.path.join(os.path.dirname(
+            current_path), "trainer-store", self.project_id)
+        os.makedirs(self.trainer_store_path)
+
+    def get_model_dict(self):
+        return dict((fd, fd_metadata.to_dict())
+                    for fd, fd_metadata in self.fd_metadata.items())
+
+    def save(self):
+        with open(os.path.join(self.trainer_store_path,
+                               'model.json'), 'w') as fp:
+            json.dump(self.get_model_dict(), fp)
 
     @staticmethod
     # Calculate the initial probability mean for the FD
