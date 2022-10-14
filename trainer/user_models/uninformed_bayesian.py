@@ -82,9 +82,28 @@ class UninformedBayesianTrainer:
         return alpha, beta
 
     def update_model(self, data):
+
+        data_idxs = set(data.keys())
+
+        # '''Predict dirtiness with current model'''
+        # is_dirty_predicted_dict = self.get_predictions(indices=data.keys())
+        # marked_rows = set(
+        #     idx for idx, is_dirty in is_dirty_predicted_dict.items() if is_dirty)
+
         for fd, fd_m in self.fd_metadata.items():
-            data_idxs = set(data.keys())
+            # # Calculate which pairs have been marked and remove them from calculation
+            # removed_pairs = set()
+
+            # for x in marked_rows:
+            #     for y in data_idxs:
+            #         x_, y_ = (x, y) if x < y else (y, x)
+            #         if (x_, y_) in scenarios[self.scenario_id]['hypothesis_space'][fd]['violation_pairs']:
+            #             removed_pairs.add((x_, y_))
+
             for i in data_idxs:
+                # if i in marked_rows:
+                #     continue
+
                 compliance_num = len([idx for idx in scenarios[self.scenario_id]['hypothesis_space'][fd]['supports'].get(i, [])
                                       if idx in data_idxs])
                 violation_num = len([idx for idx in scenarios[self.scenario_id]['hypothesis_space'][fd]['violations'].get(i, [])
@@ -94,6 +113,12 @@ class UninformedBayesianTrainer:
                     fd_m.alpha += 1
                 else:
                     fd_m.beta += 1
+
+                    # # tuple is dirty but it's part of a vio that the user caught (i.e. they marked the wrong tuple as the error but still found the vio)
+                    # if len([x for x in removed_pairs if i in x]) > 0:
+                    #     fd_m.alpha += 1
+                    # else:
+                    #     fd_m.beta += 1
 
             fd_m.alpha_history.append(fd_m.alpha)
             fd_m.beta_history.append(fd_m.beta)
