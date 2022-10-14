@@ -52,6 +52,7 @@ class Import(Resource):
 
         # Save the new project
         try:
+            os.makedirs('./store', exist_ok=True)
             os.mkdir(new_project_dir)
         except OSError:
             returned_data = {

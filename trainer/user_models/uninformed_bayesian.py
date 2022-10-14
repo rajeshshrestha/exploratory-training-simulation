@@ -80,13 +80,17 @@ class UninformedBayesianTrainer:
 
     def update_model(self, data):
         for fd, fd_m in self.fd_metadata.items():
-            data_idxs = list(data.keys())
-            for i in range(len(data_idxs)-1):
-                for j in range(i, len(data_idxs)):
-                    if data_idxs[j] in scenarios[self.scenario_id]['hypothesis_space'][fd]['violations'].get(data_idxs[i], set()):
-                        fd_m.beta += 1
-                    else:
-                        fd_m.alpha += 1
+            data_idxs = set(data.keys())
+            for i in data_idxs:
+                compliance_num = len([idx for idx in scenarios[self.scenario_id]['hypothesis_space'][fd]['supports'].get(i, [])
+                                      if idx in data_idxs])
+                violation_num = len([idx for idx in scenarios[self.scenario_id]['hypothesis_space'][fd]['violations'].get(i, [])
+                                     if idx in data_idxs])
+
+                if (compliance_num-violation_num) >= 0:
+                    fd_m.alpha += 1
+                else:
+                    fd_m.beta += 1
 
             fd_m.alpha_history.append(fd_m.alpha)
             fd_m.beta_history.append(fd_m.beta)

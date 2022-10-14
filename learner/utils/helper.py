@@ -196,7 +196,16 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
             if i in marked_rows:
                 continue
             # Todo: Adjust this logic of defining success
-            if (len(scenarios[scenario_id]['hypothesis_space'][fd]['supports'].get(i, []))-len(scenarios[scenario_id]['hypothesis_space'][fd]['violations'].get(i, []))) >= 0:  # tuple is clean
+            compliance_num = len([idx for idx in scenarios[scenario_id]
+                                 ['hypothesis_space'][fd]['supports'].get(
+                                     i, [])
+                                 if idx in s_in.index])
+            violation_num = len([idx for idx in scenarios[scenario_id]
+                                 ['hypothesis_space']
+                                 [fd]['violations'].get(i, [])
+                                 if idx in s_in.index])
+
+            if (compliance_num-violation_num) >= 0:  # tuple is clean
                 successes += 1
             else:
                 # tuple is dirty but it's part of a vio that the user caught (i.e. they marked the wrong tuple as the error but still found the vio)
@@ -310,7 +319,10 @@ def returnActiveLearningTuples(sample_size, project_id,
     '''Subsample candiate unserved indices'''
     if ACTIVE_LEARNING_CANDIDATE_INDICES_NUM > 0:
         candidate_unserved_indices = set(np.random.choice(list(
-            unserved_indices), size=ACTIVE_LEARNING_CANDIDATE_INDICES_NUM, replace=False))
+            unserved_indices),
+            size=min(ACTIVE_LEARNING_CANDIDATE_INDICES_NUM,
+                     len(unserved_indices)),
+            replace=False))
     else:
         candidate_unserved_indices = unserved_indices
 
