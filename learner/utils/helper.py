@@ -1,21 +1,16 @@
-import random
 import json
-import math
 import pickle
-import random
-import time
-from operator import itemgetter
 import logging
 
-import numpy as np
-from scipy.stats import binom
-from .initialize_variables import processed_dfs
 from .initialize_variables import scenarios
 from .initialize_variables import models_dict
 from .initialize_variables import validation_indices_dict
+from .metrics import compute_metrics
+from .sampling_policy import returnRandomTuples, returnActiveLearningTuples
+from .sampling_policy import returnStochasticBRTuples
+from .sampling_policy import returnStochasticActiveLRTuples
 from .env_variables import MODEL_FDS_TOP_K
-from .env_variables import ACCURACY_ESTIMATION_SAMPLE_NUM
-from .env_variables import ACTIVE_LEARNING_CANDIDATE_INDICES_NUM
+
 
 # Calculate the initial prior (alpha/beta) for an FD
 
@@ -279,11 +274,21 @@ def buildSample(data, sample_size, project_id,
                 sampling_method,
                 resample):
     if sampling_method == 'ACTIVELR':
-        s_index = returnActiveLearningTuples(
-            sample_size, project_id, resample=resample)
+        s_index = returnActiveLearningTuples(sample_size,
+                                             project_id,
+                                             resample=resample)
     elif sampling_method == 'RANDOM':
-        s_index = returnRandomSamples(
-            sample_size, project_id, resample=resample)
+        s_index = returnRandomTuples(sample_size,
+                                     project_id,
+                                     resample=resample)
+    elif sampling_method == 'STOCHASTICBR':
+        s_index = returnStochasticBRTuples(sample_size=sample_size,
+                                           project_id=project_id,
+                                           resample=resample)
+    elif sampling_method == 'STOCHASTICUS':
+        s_index = returnStochasticActiveLRTuples(sample_size=sample_size,
+                                                 project_id=project_id,
+                                                 resample=resample)
     else:
         raise Exception(
             f"Unknown sampling method passed: {sampling_method}!!!")
@@ -293,175 +298,3 @@ def buildSample(data, sample_size, project_id,
     logger.info(f'IDs of tuples in next sample: {s_out.index}')
 
     return s_out
-
-
-# Return Random sampling of tuples:
-def returnRandomSamples(sample_size, project_id, resample=False):
-    if resample:
-        with open('./store/' + project_id + '/project_info.json', 'r') as f:
-            project_info = json.load(f)
-            scenario_id = project_info['scenario_id']
-
-        '''Read current fd metadata of the project'''
-        data_indices = processed_dfs[scenario_id].indices
-        s_out = random.sample(list(data_indices), min(
-            len(data_indices), sample_size))
-
-    else:
-        unserved_indices = pickle.load(
-            open('./store/' + project_id + '/unserved_indices.pk', 'rb'))
-        s_out = random.sample(list(unserved_indices), min(
-            len(unserved_indices), sample_size))
-
-    return list(s_out)
-
-
-# Return tuples in using active learning
-def returnActiveLearningTuples(sample_size, project_id,
-                               resample=False):
-    '''Read current fd metadata of the project'''
-    fd_metadata = pickle.load(
-        open('./store/' + project_id + '/fd_metadata.pk', 'rb'))
-
-    unserved_indices = pickle.load(
-        open('./store/' + project_id + '/unserved_indices.pk', 'rb'))
-
-    '''Subsample candiate unserved indices'''
-    if ACTIVE_LEARNING_CANDIDATE_INDICES_NUM > 0:
-        candidate_unserved_indices = set(np.random.choice(list(
-            unserved_indices),
-            size=min(ACTIVE_LEARNING_CANDIDATE_INDICES_NUM,
-                     len(unserved_indices)),
-            replace=False))
-    else:
-        candidate_unserved_indices = unserved_indices
-
-    with open('./store/' + project_id + '/project_info.json', 'r') as f:
-        project_info = json.load(f)
-        scenario_id = project_info['scenario_id']
-
-    model_dict = dict((fd, fd_m.conf)for fd, fd_m in fd_metadata.items())
-    top_k_model_dict = dict(
-        sorted(model_dict.items(), key=itemgetter(1), reverse=True)[:MODEL_FDS_TOP_K])
-
-    '''Compute the active learning '''
-    overall_entropy_dict = compute_entropy_values(
-        indices=candidate_unserved_indices, top_model_fds=top_k_model_dict, scenario_id=scenario_id)
-
-    overall_violation_pairs = set()
-
-    if resample:
-        for fd in top_k_model_dict:
-            overall_violation_pairs |= scenarios[scenario_id]['hypothesis_space'][fd]['violation_pairs']
-    else:
-        for fd in top_k_model_dict:
-            overall_violation_pairs |= set([pair for pair in scenarios[scenario_id]['hypothesis_space'][fd]['violation_pairs'] if pair[0]
-                                           in unserved_indices and pair[1] in unserved_indices and (pair[0] in candidate_unserved_indices or pair[1] in candidate_unserved_indices)])
-
-    '''Get top sample_size indices'''
-    sorted_entropy_items = sorted(
-        overall_entropy_dict.items(), key=itemgetter(1), reverse=True)
-
-    '''Sampled data from the violation pairs that has top n entropy values'''
-    s_out = set()
-    for idx, entropy_value in sorted_entropy_items:
-
-        '''Sample from the violation pairs that has the idx in it'''
-        candidate_violation_pairs = [
-            vio_pair for vio_pair in overall_violation_pairs if
-            idx in vio_pair]
-        if len(candidate_violation_pairs) == 0:
-            continue
-        new_data = random.sample(candidate_violation_pairs, 1)[0]
-
-        s_out |= set(new_data)
-
-        if len(s_out) >= sample_size:
-            break
-
-    '''If insufficient sample remaining from top k entropy indices'''
-    remaining = sample_size-len(s_out)
-    if remaining > 0:
-        missing_ones = [idx for idx, entropy_value in sorted_entropy_items
-                        if idx not in s_out]
-        s_out |= set(missing_ones[:remaining])
-
-    return list(s_out)
-
-
-def compute_conditional_clean_prob(idx, fd, fd_prob, scenario_id, data_indices=None):
-    if data_indices is None:
-        compliance_num = len(
-            scenarios[scenario_id]['hypothesis_space'][fd]['supports'].get(idx, []))
-        violation_num = len(
-            scenarios[scenario_id]['hypothesis_space'][fd]['violations'].get(idx, []))
-    else:
-        compliance_num = len([idx_ for idx_ in scenarios[scenario_id]['hypothesis_space']
-                             [fd]['supports'].get(idx, []) if idx_ in data_indices])
-        violation_num = len([idx_ for idx_ in scenarios[scenario_id]['hypothesis_space']
-                            [fd]['violations'].get(idx, []) if idx_ in data_indices])
-
-    tuple_clean_score = math.exp(fd_prob*(compliance_num-violation_num))
-    tuple_dirty_score = math.exp(fd_prob*(-compliance_num+violation_num))
-    cond_p_clean = tuple_clean_score/(tuple_clean_score+tuple_dirty_score)
-
-    return cond_p_clean
-
-
-def get_average_cond_clean_prediction(indices, model, scenario_id):
-    conditional_clean_probability_dict = dict()
-    indices = set(indices)
-    for idx in indices:
-        cond_clean_prob = np.mean([compute_conditional_clean_prob(
-            idx=idx, fd=fd, fd_prob=fd_prob, scenario_id=scenario_id,
-            data_indices=indices) for fd, fd_prob in model.items()])  # whether to include the validation_indices or all the data_indices while computing the conditional clean probability
-        conditional_clean_probability_dict[idx] = cond_clean_prob
-    return conditional_clean_probability_dict
-
-
-def compute_metrics(indices, model, scenario_id, top_k):
-    '''Pick top k fds if needed'''
-    if 0 < top_k < len(model):
-        model = dict(sorted(model.items(), key=itemgetter(1),
-                     reverse=True)[:top_k])
-
-    conditional_clean_probability_dict = get_average_cond_clean_prediction(
-        indices=indices, model=model, scenario_id=scenario_id)
-    logger.info(conditional_clean_probability_dict)
-
-    idxs = list(conditional_clean_probability_dict.keys())
-    is_dirty_true_labels = [not models_dict[scenario_id]["predictions"][idx]
-                            for idx in idxs]
-    is_dirty_predicted_labels = [conditional_clean_probability_dict[idx] < 0.5
-                                 for idx in idxs]
-    is_correct = [true_val == predicted_val for true_val, predicted_val
-                  in zip(is_dirty_true_labels, is_dirty_predicted_labels)]  # ignore indices with probability=0.5 as this means most probably, there wasn't any compliance and violations in the validation data for the tuple
-    true_positive = [true_val and predicted_val for true_val, predicted_val
-                     in zip(is_dirty_true_labels, is_dirty_predicted_labels)]
-
-    # print(set(is_correct))
-    # print(set(true_positive))
-    # print(set(is_dirty_true_labels))
-    # print(set(is_dirty_predicted_labels))
-
-    accuracy = np.mean(is_correct)
-    recall = sum(true_positive)/sum(is_dirty_true_labels)
-    precision = sum(true_positive)/sum(is_dirty_predicted_labels)
-    f1 = 2*recall*precision/(recall+precision)
-
-    return accuracy, recall, precision, f1
-
-
-def compute_entropy_values(indices, top_model_fds, scenario_id):
-
-    conditional_clean_probability_dict = get_average_cond_clean_prediction(
-        indices=indices, model=top_model_fds, scenario_id=scenario_id)
-
-    probabilities = np.array([conditional_clean_probability_dict[idx]
-                              for idx in indices])
-    entropies = -probabilities * \
-        np.log2(probabilities)-(1-probabilities)*np.log2(1-probabilities)
-    entropy_dict = dict((idx, entropy_val)
-                        for idx, entropy_val in zip(indices, entropies))
-
-    return entropy_dict

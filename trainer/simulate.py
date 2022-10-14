@@ -63,7 +63,10 @@ if __name__ == '__main__':
                             'learning-oracle',
                             'uninformed-bayesian'],\
         "Invalid trainer type passed!!!"
-    assert sampling_method in ['RANDOM', 'ACTIVELR'],\
+    assert sampling_method in ['RANDOM',
+                               'ACTIVELR',
+                               'STOCHASTICBR',
+                               'STOCHASTICUS'],\
         "Invalid sampling method passed!!!"
 
     cpu_num = os.cpu_count()
