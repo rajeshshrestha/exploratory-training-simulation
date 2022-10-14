@@ -32,18 +32,21 @@ class Import(Resource):
         email = request.form.get('email')
         initial_user_h = request.form.get('initial_fd')
         fd_comment = request.form.get('fd_comment')
-        skip_user = request.form.get('skip_user')
+        skip_user = (request.form.get('skip_user').lower() == "true")
         sampling_method = request.form.get('sampling_method')
         trainer_type = request.form.get('trainer_type')
+        use_val_data = (request.form.get('use_val_data').lower() == "true")
         if scenario_id is None or email is None:
             scenario_id = json.loads(request.data)['scenario_id']
             email = json.loads(request.data)['email']
             initial_user_h = json.loads(request.data)['initial_fd']
             fd_comment = json.loads(request.data)['fd_comment']
             skip_user = False if 'skip_user' not in json.loads(
-                request.data).keys() else json.loads(request.data)['skip_user']
+                request.data).keys() else (json.loads(request.data)['skip_user'].lower() == 'true')
             sampling_method = json.loads(request.data)['sampling_type']
-            trainer_type = json.load(request.data)['trainer_type']
+            trainer_type = json.loads(request.data)['trainer_type']
+            use_val_data = (json.loads(request.data)[
+                            'use_val_data'].lower() == 'true')
         logger.info(initial_user_h)
 
         new_project_id = trainer_type + "_" + sampling_method + \
@@ -181,7 +184,14 @@ class Import(Resource):
         pickle.dump(current_iter,
                     open(new_project_dir + '/current_iter.pk', 'wb'))
 
-        total_indices = set(data.index) - validation_indices_dict[scenario_id]
+        if use_val_data:
+            logger.info(
+                "Using all data including validation data in interaction")
+            total_indices = set(data.index)
+        else:
+            logger.info("Using data except val data for training")
+            total_indices = set(data.index) - \
+                validation_indices_dict[scenario_id]
         pickle.dump(total_indices,
                     open(new_project_dir + '/unserved_indices.pk', 'wb'))
 

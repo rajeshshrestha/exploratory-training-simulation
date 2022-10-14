@@ -5,7 +5,7 @@ import logging
 logger = logging.getLogger(__file__)
 
 
-def initialize_learner(scenario_id, sampling_method, trainer_type):
+def initialize_learner(scenario_id, sampling_method, trainer_type, use_val_data):
     """
     Initialize the project and the user intital prior belief
     """
@@ -20,7 +20,8 @@ def initialize_learner(scenario_id, sampling_method, trainer_type):
                 "skip_user": True,
                 "violation_ratio": "close",
                 "sampling_method": sampling_method,
-                "trainer_type": trainer_type
+                "trainer_type": trainer_type,
+                'use_val_data': use_val_data
             },
         ).json()
         project_id = response["project_id"]

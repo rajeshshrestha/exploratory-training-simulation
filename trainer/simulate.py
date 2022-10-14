@@ -9,12 +9,13 @@ from utils.interact_learner import send_feedback
 from user_models.trainer import TrainerModel
 
 
-def run(scenario_id, trainer_type, sampling_method):
+def run(scenario_id, trainer_type, sampling_method, use_val_data):
 
     # Initialize the learner
     project_id, _ = initialize_learner(scenario_id=scenario_id,
                                        sampling_method=sampling_method,
-                                       trainer_type=trainer_type)
+                                       trainer_type=trainer_type,
+                                       use_val_data=use_val_data)
 
     # Get the first batch of sample from the learner
     data, columns, feedback = get_initial_sample(project_id=project_id)
@@ -58,6 +59,7 @@ if __name__ == '__main__':
         2]
     sampling_method = sys.argv[3]
     num_runs = int(sys.argv[4])  # How many runs of this simulation to do
+    use_val_data = (sys.argv[5].lower() == 'true')
 
     assert trainer_type in ['full-oracle',
                             'learning-oracle',
@@ -71,8 +73,9 @@ if __name__ == '__main__':
 
     cpu_num = os.cpu_count()
 
-    with Pool(10) as p:
+    with Pool(cpu_num-1) as p:
         p.map(partial(run,
                       trainer_type=trainer_type,
-                      sampling_method=sampling_method),
+                      sampling_method=sampling_method,
+                      use_val_data=use_val_data),
               [scenario_id for i in range(num_runs)])
