@@ -157,9 +157,9 @@ for dataset in new_scenarios_dict:
                         x) for x in new_scenarios_dict[dataset]['hypothesis_space'][hypothesis][val_type][idx] if str(x) != str(idx)]
 
 # %%
-new_scenarios_dict['omdb'][
+new_scenarios_dict[DATASET][
     'processed_dataset_path'] = F"data/processed-data/{DATASET}-sampled.csv"
-new_scenarios_dict['omdb']['raw_dataset_path'] = F"data/raw-data/{DATASET}-clean-full.csv"
+new_scenarios_dict[DATASET]['raw_dataset_path'] = F"data/raw-data/{DATASET}-clean-full.csv"
 
 with open("./new_scenarios.json", 'w') as fp:
     json.dump(new_scenarios_dict, fp)
