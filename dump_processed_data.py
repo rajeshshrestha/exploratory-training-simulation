@@ -431,7 +431,7 @@ for hypothesis in _models_dict[DATASET]['model']:
         violation_pairs_num += len(
             set(hypothesis_info_dict['violations'][idx]).intersection(_clean_indices))
 
-    is_correct = round(support_pairs_num/(support_pairs_num+violation_pairs_num),
+    is_correct = round(support_pairs_num/(support_pairs_num+violation_pairs_num+1e-7),
                        3) == round(_models_dict[DATASET]['model'][hypothesis], 3)
 
     if not is_correct:
