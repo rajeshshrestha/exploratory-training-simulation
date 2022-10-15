@@ -1,25 +1,25 @@
 #!/bin/bash
-RUNS=30
+RUNS=9
 USE_VAL_DATA=true
 
-for DATASET in omdb airport
+for DATASET in airport omdb
 do
-    for MAX_DIRTY_PROP in 0.05 0.1 0.3 0.5
+    for MAX_DIRTY_PROP in 0.5 0.3 0.1 0.05
     do
         echo "Dumping data.."
-        python dump_processed_data.py --dataset $DATASET --max-dirty-prop $MAX_DIRTY_PROP
+        python dump_processed_data.py --dataset $DATASET --max-clean-num 1000 --max-dirty-prop $MAX_DIRTY_PROP
         
-        (cd learner && gunicorn -w "$(sysctl -n hw.physicalcpu)" --bind 0.0.0.0:5000 --log-level info --timeout 240 api:app)&
+        (cd learner && gunicorn -w "$(($(sysctl -n hw.physicalcpu)-1))" --bind 0.0.0.0:5000 --log-level info --timeout 240 api:app)&
         
-        sleep 10
+        sleep 20
         cd ./trainer
         
         # for TRAINER_TYPE in full-oracle learning-oracle bayesian
         for TRAINER_TYPE in bayesian
         do
-            for TRAINER_PRIOR_TYPE in uniform-0.1 uniform-0.5 uniform-0.9 random data-estimate
+            for TRAINER_PRIOR_TYPE in data-estimate uniform-0.1 uniform-0.5 uniform-0.9 random
             do
-                for LEARNER_PRIOR_TYPE in uniform-0.1 uniform-0.5 uniform-0.9 random data-estimate
+                for LEARNER_PRIOR_TYPE in data-estimate uniform-0.1 uniform-0.5 uniform-0.9 random data-estimate
                 do
                     for SAMPLING_TYPE  in RANDOM ACTIVELR STOCHASTICBR STOCHASTICUS
                     do
@@ -32,7 +32,7 @@ do
         done
         cd ..
         pkill -f gunicorn
-        sleep 15
+        sleep 20
     done
 done
 

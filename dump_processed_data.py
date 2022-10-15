@@ -303,7 +303,7 @@ with open('./new_scenarios.json', 'r') as f:
 '''Process new_scenarios to make the processing faster later'''
 processed_df = dict()
 filtered_processed_scenarios = dict()
-for dataset in scenarios:
+for dataset in models_dict:
     processed_df[dataset] = pd.read_csv(
         scenarios[dataset]['processed_dataset_path'], index_col=0)
     processed_df[dataset].index = processed_df[dataset].index.map(str)

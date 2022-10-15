@@ -152,7 +152,7 @@ class BayesianTrainer:
         support_num = len(scenario['hypothesis_space'][fd]['support_pairs'])
         violation_num = len(scenario['hypothesis_space'][fd]['support_pairs'])
 
-        return support_num/(support_num+violation_num)
+        return support_num/(support_num+violation_num+1e-7)
 
     def get_model_dict(self):
         return dict((fd, fd_metadata.to_dict())

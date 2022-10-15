@@ -285,4 +285,4 @@ def compute_hyp_conf_in_data(fd, scenario_id):
     support_num = len(scenario['hypothesis_space'][fd]['support_pairs'])
     violation_num = len(scenario['hypothesis_space'][fd]['support_pairs'])
 
-    return support_num/(support_num+violation_num)
+    return support_num/(support_num+violation_num+1e-7)
