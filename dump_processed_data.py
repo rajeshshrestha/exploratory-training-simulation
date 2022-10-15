@@ -8,9 +8,7 @@ from copy import deepcopy
 import pandas as pd
 import json
 from tqdm import tqdm
-from multiprocessing import Pool
 import os
-from pprint import pprint
 import numpy as np
 import math
 from operator import itemgetter
@@ -23,6 +21,9 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--max-clean-num', default=1500, type=int)
 parser.add_argument('--max-dirty-prop', default=0.1, type=float)
+parser.add_argument('--dataset', default='airport', type=str)
+parser.add_argument('--scenario-id', default='11', type=str)
+
 args = parser.parse_args()
 print(args)
 
@@ -30,11 +31,14 @@ print(args)
 clean_max_num = args.max_clean_num
 dirty_sample_percentage = args.max_dirty_prop
 
+DATASET = args.dataset
+SCENARIO_ID = args.scenario_id
+
 # %% [markdown]
 # ## Read raw data
 
 # %%
-data_path = "./data/raw-data/omdb-clean-full.csv"
+data_path = f"./data/raw-data/{DATASET}-clean-full.csv"
 
 raw_df = pd.read_csv(data_path)
 raw_df.rename(columns=dict((col, col.lower())
@@ -46,7 +50,7 @@ raw_df.index = raw_df.index.map(str)
 
 with open("./scenarios.json", 'r') as fp:
     scenarios = json.load(fp)
-required_scenario_info = scenarios["3"]
+required_scenario_info = scenarios[SCENARIO_ID]
 hypothesis_space = [hypothesis['cfd']
                     for hypothesis in required_scenario_info['hypothesis_space']]
 
@@ -56,8 +60,8 @@ with open("./new_scenarios.json", 'r') as fp:
 
 # %%
 hypothesis_support_violation_ratio_info = dict()
-for hypothesis in new_scenarios_dict['omdb']['hypothesis_space']:
-    hypothesis_info_dict = new_scenarios_dict['omdb']['hypothesis_space'][hypothesis]
+for hypothesis in new_scenarios_dict[DATASET]['hypothesis_space']:
+    hypothesis_info_dict = new_scenarios_dict[DATASET]['hypothesis_space'][hypothesis]
     if len(hypothesis_info_dict['lfd']+hypothesis_info_dict['rfd']) not in [3, 4]:
         continue
 
@@ -77,7 +81,7 @@ for hypothesis in new_scenarios_dict['omdb']['hypothesis_space']:
 np.random.seed(1000)
 model = dict((hypothesis, np.random.uniform(max(0, ratio-0.25), min(1, ratio+0.25)))
              for hypothesis, ratio in hypothesis_support_violation_ratio_info.items())
-model_dict = {'omdb': {'model': model}}
+model_dict = {DATASET: {'model': model}}
 
 # %%
 with open("./trainer_model.json", 'w') as fp:
@@ -94,9 +98,9 @@ def predict_clean_tuple(idx, model):
     for hypothesis, conf in model.items():
         '''Check the number of supports and violations based on the model'''
         support_pairs_num = len(
-            new_scenarios_dict['omdb']['hypothesis_space'][hypothesis]['supports'].get(idx, []))
+            new_scenarios_dict[DATASET]['hypothesis_space'][hypothesis]['supports'].get(idx, []))
         violation_pairs_num = len(
-            new_scenarios_dict['omdb']['hypothesis_space'][hypothesis]['violations'].get(idx, []))
+            new_scenarios_dict[DATASET]['hypothesis_space'][hypothesis]['violations'].get(idx, []))
 
         '''Vote according to the hypothesis conf'''
         total_score += (conf*(support_pairs_num-violation_pairs_num))
@@ -111,7 +115,7 @@ def predict_clean_tuple(idx, model):
 # %%
 clean_tuple_indices = set()
 model_score_dict = dict()
-for idx in new_scenarios_dict['omdb']['data_indices']:
+for idx in new_scenarios_dict[DATASET]['data_indices']:
     is_clean, total_score = predict_clean_tuple(idx, model)
     if is_clean:
         clean_tuple_indices.add(idx)
@@ -122,8 +126,8 @@ for idx in new_scenarios_dict['omdb']['data_indices']:
 len(clean_tuple_indices)
 
 # %%
-model_dict['omdb']['predictions'] = dict((idx, True) if idx in clean_tuple_indices else (
-    idx, False) for idx in new_scenarios_dict['omdb']['data_indices'])
+model_dict[DATASET]['predictions'] = dict((idx, True) if idx in clean_tuple_indices else (
+    idx, False) for idx in new_scenarios_dict[DATASET]['data_indices'])
 
 # %%
 with open("./trainer_model.json", 'w') as fp:
@@ -135,13 +139,13 @@ with open("./trainer_model.json", 'w') as fp:
 def get_conditional_clean_prob(idx, fd, model_probab, valid_indices=None):
     if valid_indices is None:
         compliance_num = len(
-            new_scenarios_dict['omdb']['hypothesis_space'][fd]['supports'].get(str(idx), []))
+            new_scenarios_dict[DATASET]['hypothesis_space'][fd]['supports'].get(str(idx), []))
         violation_num = len(
-            new_scenarios_dict['omdb']['hypothesis_space'][fd]['violations'].get(str(idx), []))
+            new_scenarios_dict[DATASET]['hypothesis_space'][fd]['violations'].get(str(idx), []))
     else:
-        compliance_num = len([idx_ for idx_ in new_scenarios_dict['omdb']['hypothesis_space']
+        compliance_num = len([idx_ for idx_ in new_scenarios_dict[DATASET]['hypothesis_space']
                              [fd]['supports'].get(str(idx), []) if idx_ in valid_indices])
-        violation_num = len([idx_ for idx_ in new_scenarios_dict['omdb']['hypothesis_space']
+        violation_num = len([idx_ for idx_ in new_scenarios_dict[DATASET]['hypothesis_space']
                             [fd]['violations'].get(str(idx), []) if idx_ in valid_indices])
 
     tuple_clean_score = math.exp(model_probab*(compliance_num-violation_num))
@@ -151,12 +155,12 @@ def get_conditional_clean_prob(idx, fd, model_probab, valid_indices=None):
 
 
 # %%
-model = model_dict['omdb']['model']
+model = model_dict[DATASET]['model']
 conditional_clean_probability_dict = dict()
 clean_indices = set()
 dirty_indices = set()
 
-data_indices = new_scenarios_dict['omdb']['data_indices']
+data_indices = new_scenarios_dict[DATASET]['data_indices']
 
 top_10_fds = dict(sorted(model.items(), key=itemgetter(1), reverse=True)[:10])
 
@@ -193,7 +197,7 @@ print(len(sampled_data_indices))
 
 # %%
 '''Assume every data to be clean at the beginning and compute the model based on that'''
-new_model = deepcopy(model_dict['omdb']['model'])
+new_model = deepcopy(model_dict[DATASET]['model'])
 model_mae = float("inf")
 
 new_data_indices = sampled_data_indices
@@ -231,8 +235,8 @@ while model_mae > 1e-05:
 
     '''Use clean data to estimate model'''
     model_mae = 0
-    for hypothesis in new_scenarios_dict['omdb']['hypothesis_space']:
-        hypothesis_info_dict = new_scenarios_dict['omdb']['hypothesis_space'][hypothesis]
+    for hypothesis in new_scenarios_dict[DATASET]['hypothesis_space']:
+        hypothesis_info_dict = new_scenarios_dict[DATASET]['hypothesis_space'][hypothesis]
         if len(hypothesis_info_dict['lfd']+hypothesis_info_dict['rfd']) not in [3, 4]:
             continue
 
@@ -262,9 +266,9 @@ final_dirty_proportion = len(new_dirty_indices) / \
     len(new_clean_indices.union(new_dirty_indices))
 print(f"Final Proportion: {final_dirty_proportion}")
 # %%
-model_dict = {'omdb': {'model': new_model,
-                       'dirty_proportion': final_dirty_proportion}}
-model_dict['omdb']['predictions'] = dict(
+model_dict = {DATASET: {'model': new_model,
+                        'dirty_proportion': final_dirty_proportion}}
+model_dict[DATASET]['predictions'] = dict(
     (idx, True) if idx in new_clean_indices else (idx, False) for idx in new_data_indices)
 with open("./trainer_model.json", 'w') as fp:
     json.dump(model_dict, fp)
@@ -275,10 +279,10 @@ sampled_df
 
 # %%
 os.makedirs("./data/processed-data", exist_ok=True)
-sampled_df.to_csv("./data/processed-data/omdb-sampled.csv")
+sampled_df.to_csv(f"./data/processed-data/{DATASET}-sampled.csv")
 
 # %%
-new_scenarios_dict['omdb']['hypothesis_space']['(title) => director'].keys()
+new_scenarios_dict[DATASET]['hypothesis_space']['(title) => director'].keys()
 
 # %% [markdown]
 # ## Final Process and Dump pickled data
@@ -306,7 +310,7 @@ filtered_processed_scenarios = dict()
 for dataset in scenarios:
 
     processed_df[dataset] = pd.read_csv(
-        scenarios['omdb']['processed_dataset_path'], index_col=0)
+        scenarios[DATASET]['processed_dataset_path'], index_col=0)
     processed_df[dataset].index = processed_df[dataset].index.map(str)
     required_indices = set(processed_df[dataset].index)
 
@@ -349,7 +353,7 @@ with open("./data/processed-exp-data/processed_dfs.pk", 'wb') as fp:
     pk.dump(processed_df, fp)
 
 # %%
-filtered_processed_scenarios['omdb'].keys()
+filtered_processed_scenarios[DATASET].keys()
 
 # %% [markdown]
 # ## Final Validation
@@ -401,25 +405,25 @@ def get_average_cond_clean_prediction(indices, model, scenario_id):
 # %%
 
 
-_model = dict(sorted(_models_dict['omdb']['model'].items(), key=itemgetter(1),
+_model = dict(sorted(_models_dict[DATASET]['model'].items(), key=itemgetter(1),
                      reverse=True)[:10])
-_clean_indices = set([idx for idx in _models_dict['omdb']
-                     ['predictions'] if _models_dict['omdb']['predictions'][idx]])
+_clean_indices = set([idx for idx in _models_dict[DATASET]
+                     ['predictions'] if _models_dict[DATASET]['predictions'][idx]])
 _clean_probab_dict = get_average_cond_clean_prediction(
-    _processed_df['omdb'].index, model=_model, scenario_id='omdb')
+    _processed_df[DATASET].index, model=_model, scenario_id=DATASET)
 
 # %%
 # Check the clean label in the model file
-for idx in _processed_df['omdb'].index:
+for idx in _processed_df[DATASET].index:
     _clean = _clean_probab_dict[idx] >= 0.5
-    if _clean == _models_dict['omdb']['predictions'][idx]:
+    if _clean == _models_dict[DATASET]['predictions'][idx]:
         continue
-    print(idx, _clean, _models_dict['omdb']['predictions'][idx])
+    print(idx, _clean, _models_dict[DATASET]['predictions'][idx])
 
 # %%
 # Check the aggreage model on the overall data
-for hypothesis in _models_dict['omdb']['model']:
-    hypothesis_info_dict = _filtered_processed_scenarios['omdb']['hypothesis_space'][hypothesis]
+for hypothesis in _models_dict[DATASET]['model']:
+    hypothesis_info_dict = _filtered_processed_scenarios[DATASET]['hypothesis_space'][hypothesis]
 
     support_pairs_num, violation_pairs_num = 0, 0
     for idx in hypothesis_info_dict['supports']:
@@ -435,23 +439,23 @@ for hypothesis in _models_dict['omdb']['model']:
             set(hypothesis_info_dict['violations'][idx]).intersection(_clean_indices))
 
     is_correct = (support_pairs_num/(support_pairs_num+violation_pairs_num)
-                  ) == _models_dict['omdb']['model'][hypothesis]
+                  ) == _models_dict[DATASET]['model'][hypothesis]
 
     if not is_correct:
         print((support_pairs_num/(support_pairs_num+violation_pairs_num)),
-              _models_dict['omdb']['model'][hypothesis])
+              _models_dict[DATASET]['model'][hypothesis])
 
 # %%
-validation_indices = {'omdb': sample(
-    list(_models_dict['omdb']['predictions'].keys()), 1000)}
+validation_indices = {DATASET: sample(
+    list(_models_dict[DATASET]['predictions'].keys()), 1000)}
 
 with open('./data/processed-data/validation_indices.json', 'w') as fp:
     json.dump(validation_indices, fp)
 
-validation_indices['omdb'] = set(validation_indices['omdb'])
+validation_indices[DATASET] = set(validation_indices[DATASET])
 
 with open('./data/processed-exp-data/validation_indices.pk', 'wb') as fp:
     pk.dump(validation_indices, fp)
 
 # %%
-print(1-np.mean([val for val in _models_dict['omdb']['predictions'].values()]))
+print(1-np.mean([val for val in _models_dict[DATASET]['predictions'].values()]))
