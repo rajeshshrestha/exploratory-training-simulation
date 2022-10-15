@@ -122,7 +122,7 @@ class BayesianTrainer:
 
                 fd_metadata[h] = fd_m
 
-        elif self.prior_type == 'data_estimate':
+        elif self.prior_type == 'data-estimate':
             for h in scenario['hypothesis_space']:
                 mu = self.compute_hyp_conf_in_data()
                 # Calculate alpha and beta

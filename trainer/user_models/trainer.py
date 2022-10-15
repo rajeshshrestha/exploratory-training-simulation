@@ -19,7 +19,7 @@ class TrainerModel:
         assert trainer_prior_type in ['uniform-0.1',
                                       'uniform-0.5',
                                       'uniform-0.9',
-                                      'data_estimate',
+                                      'data-estimate',
                                       'random'
                                       ], f"Invalid Trainer Prior:{trainer_prior_type} type used!!!"
         self.trainer_prior_type = trainer_prior_type

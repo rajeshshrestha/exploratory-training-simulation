@@ -2,7 +2,7 @@
 RUNS=9
 USE_VAL_DATA=true
 TRAINER_PRIOR_TYPE=uniform-0.1
-LEARNER_PRIOR_TYPE=uniform-0.9
+LEARNER_PRIOR_TYPE=data-estimate
 
 python simulate.py omdb full-oracle RANDOM $RUNS $USE_VAL_DATA $TRAINER_PRIOR_TYPE $LEARNER_PRIOR_TYPE;
 python simulate.py omdb learning-oracle RANDOM $RUNS $USE_VAL_DATA $TRAINER_PRIOR_TYPE $LEARNER_PRIOR_TYPE;

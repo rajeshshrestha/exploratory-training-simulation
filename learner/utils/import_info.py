@@ -248,7 +248,7 @@ def get_initial_fd_metadata(scenario_id, prior_type):
 
             fd_metadata[h] = fd_m
 
-    elif prior_type == 'data_estimate':
+    elif prior_type == 'data-estimate':
         for h in scenario['hypothesis_space']:
             mu = compute_hyp_conf_in_data(fd=h,
                                           scenario_id=scenario_id)

@@ -85,13 +85,13 @@ if __name__ == '__main__':
     assert trainer_prior_type in ['uniform-0.1',
                                   'uniform-0.5',
                                   'uniform-0.9',
-                                  'data_estimate',
+                                  'data-estimate',
                                   'random'
                                   ], "Invalid Trainer Prior type used!!!"
     assert learner_prior_type in ['uniform-0.1',
                                   'uniform-0.5',
                                   'uniform-0.9',
-                                  'data_estimate',
+                                  'data-estimate',
                                   'random'
                                   ], "Invalid Learner Prior type used!!!"
 
