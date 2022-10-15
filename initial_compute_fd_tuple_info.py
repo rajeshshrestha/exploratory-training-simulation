@@ -93,7 +93,7 @@ def get_support_violation_tuples(data, idx, fd_components):
         if idx == idx_:
             continue
         is_support, is_violation = is_support_violation(
-            fd_components=fd_components, tuple_1=data.iloc[idx], tuple_2=data.iloc[idx_])
+            fd_components=fd_components, tuple_1=data.loc[idx], tuple_2=data.loc[idx_])
         if is_support:
             supports.append(idx_)
         elif is_violation:
