@@ -124,7 +124,7 @@ class BayesianTrainer:
 
         elif self.prior_type == 'data-estimate':
             for h in scenario['hypothesis_space']:
-                mu = self.compute_hyp_conf_in_data()
+                mu = self.compute_hyp_conf_in_data(fd=h)
                 # Calculate alpha and beta
                 alpha, beta = self.initialPrior(mu, self.prior_variance)
 
