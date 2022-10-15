@@ -124,6 +124,7 @@ cpu_num = os.cpu_count()
 
 # %%
 if os.path.exists("./new_scenarios.json"):
+    print("Reading already exisitng scenarios file")
     with open("./new_scenarios.json", 'r') as fp:
         new_scenarios_dict = json.load(fp)
 else:
