@@ -19,7 +19,7 @@ do
         do
             for TRAINER_PRIOR_TYPE in data-estimate uniform-0.1 uniform-0.5 uniform-0.9 random
             do
-                for LEARNER_PRIOR_TYPE in data-estimate uniform-0.1 uniform-0.5 uniform-0.9 random data-estimate
+                for LEARNER_PRIOR_TYPE in data-estimate uniform-0.1 uniform-0.5 uniform-0.9 random
                 do
                     for SAMPLING_TYPE  in RANDOM ACTIVELR STOCHASTICBR STOCHASTICUS
                     do
