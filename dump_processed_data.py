@@ -447,7 +447,7 @@ for hypothesis in _models_dict[DATASET]['model']:
 
 # %%
 validation_indices = {DATASET: sample(
-    list(_models_dict[DATASET]['predictions'].keys()), 1000)}
+    list(_models_dict[DATASET]['predictions'].keys()), max(1, min(1000, len(_processed_df[DATASET].index)-500)))}
 
 with open('./data/processed-data/validation_indices.json', 'w') as fp:
     json.dump(validation_indices, fp)
