@@ -310,7 +310,7 @@ filtered_processed_scenarios = dict()
 for dataset in scenarios:
 
     processed_df[dataset] = pd.read_csv(
-        scenarios[DATASET]['processed_dataset_path'], index_col=0)
+        scenarios[dataset]['processed_dataset_path'], index_col=0)
     processed_df[dataset].index = processed_df[dataset].index.map(str)
     required_indices = set(processed_df[dataset].index)
 
