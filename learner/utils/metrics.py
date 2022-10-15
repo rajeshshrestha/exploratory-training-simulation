@@ -61,9 +61,9 @@ def compute_metrics(indices, model, scenario_id, top_k):
                      in zip(is_dirty_true_labels, is_dirty_predicted_labels)]
 
     accuracy = np.mean(is_correct)
-    recall = sum(true_positive)/sum(is_dirty_true_labels)
-    precision = sum(true_positive)/sum(is_dirty_predicted_labels)
-    f1 = 2*recall*precision/(recall+precision)
+    recall = sum(true_positive)/(sum(is_dirty_true_labels)+1e-7)
+    precision = sum(true_positive)/(sum(is_dirty_predicted_labels)+1e-7)
+    f1 = 2*recall*precision/(recall+precision+1e-7)
 
     return accuracy, recall, precision, f1
 
