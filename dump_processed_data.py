@@ -72,7 +72,7 @@ for hypothesis in new_scenarios_dict[DATASET]['hypothesis_space']:
         violation_pairs_num += len(hypothesis_info_dict['violations'][idx])
 
     hypothesis_support_violation_ratio_info[hypothesis] = support_pairs_num/(
-        support_pairs_num+violation_pairs_num)
+        support_pairs_num+violation_pairs_num+1e-7)
 
 
 # %%
@@ -80,14 +80,13 @@ for hypothesis in new_scenarios_dict[DATASET]['hypothesis_space']:
 np.random.seed(1000)
 model = dict((hypothesis, np.random.uniform(max(0, ratio-0.25), min(1, ratio+0.25)))
              for hypothesis, ratio in hypothesis_support_violation_ratio_info.items())
-model_dict = {DATASET: {'model': model}}
 
-# %%
-with open("./trainer_model.json", 'w') as fp:
-    json.dump(model_dict, fp)
-
-# %%
-# Predict a tuple using a model
+if os.path.exists("./trainer_model.json"):
+    with open("./trainer_model.json", 'r') as fp:
+        model_dict = json.load(fp)
+        model_dict[DATASET] = {'model': model}
+else:
+    model_dict = {DATASET: {'model': model}}
 
 # %%
 
@@ -253,7 +252,8 @@ while model_mae > 1e-05:
             violation_pairs_num += len(
                 [idx1 for idx1 in hypothesis_info_dict['violations'][idx] if idx1 in new_clean_indices])
 
-        fd_prob = support_pairs_num/(support_pairs_num+violation_pairs_num)
+        fd_prob = support_pairs_num / \
+            (support_pairs_num+violation_pairs_num+1e-7)
 
         '''Compute mae with previous model value'''
         model_mae += abs(new_model[hypothesis]-fd_prob)
@@ -265,8 +265,8 @@ final_dirty_proportion = len(new_dirty_indices) / \
     len(new_clean_indices.union(new_dirty_indices))
 print(f"Final Proportion: {final_dirty_proportion}")
 # %%
-model_dict = {DATASET: {'model': new_model,
-                        'dirty_proportion': final_dirty_proportion}}
+model_dict[DATASET] = {'model': new_model,
+                       'dirty_proportion': final_dirty_proportion}
 model_dict[DATASET]['predictions'] = dict(
     (idx, True) if idx in new_clean_indices else (idx, False) for idx in new_data_indices)
 with open("./trainer_model.json", 'w') as fp:
@@ -279,9 +279,6 @@ sampled_df
 # %%
 os.makedirs("./data/processed-data", exist_ok=True)
 sampled_df.to_csv(f"./data/processed-data/{DATASET}-sampled.csv")
-
-# %%
-new_scenarios_dict[DATASET]['hypothesis_space']['(title) => director'].keys()
 
 # %% [markdown]
 # ## Final Process and Dump pickled data
@@ -307,14 +304,13 @@ with open('./new_scenarios.json', 'r') as f:
 processed_df = dict()
 filtered_processed_scenarios = dict()
 for dataset in scenarios:
-
     processed_df[dataset] = pd.read_csv(
         scenarios[dataset]['processed_dataset_path'], index_col=0)
     processed_df[dataset].index = processed_df[dataset].index.map(str)
     required_indices = set(processed_df[dataset].index)
 
-    filtered_processed_scenarios = {dataset: {'data_indices': set(
-        scenarios[dataset]['data_indices']).intersection(required_indices), 'hypothesis_space': dict()}}
+    filtered_processed_scenarios[dataset] = {'data_indices': set(
+        scenarios[dataset]['data_indices']).intersection(required_indices), 'hypothesis_space': dict()}
 
     '''Filter required fds and data_indices'''
     for hypothesis in tqdm(scenarios[dataset]['hypothesis_space']):
@@ -351,8 +347,6 @@ with open("./data/processed-exp-data/filtered_processed_scenarios.pk", 'wb') as 
 with open("./data/processed-exp-data/processed_dfs.pk", 'wb') as fp:
     pk.dump(processed_df, fp)
 
-# %%
-filtered_processed_scenarios[DATASET].keys()
 
 # %% [markdown]
 # ## Final Validation
@@ -437,21 +431,22 @@ for hypothesis in _models_dict[DATASET]['model']:
         violation_pairs_num += len(
             set(hypothesis_info_dict['violations'][idx]).intersection(_clean_indices))
 
-    is_correct = (support_pairs_num/(support_pairs_num+violation_pairs_num)
-                  ) == _models_dict[DATASET]['model'][hypothesis]
+    is_correct = round(support_pairs_num/(support_pairs_num+violation_pairs_num),
+                       3) == round(_models_dict[DATASET]['model'][hypothesis], 3)
 
     if not is_correct:
         print((support_pairs_num/(support_pairs_num+violation_pairs_num)),
               _models_dict[DATASET]['model'][hypothesis])
 
 # %%
-validation_indices = {DATASET: sample(
-    list(_models_dict[DATASET]['predictions'].keys()), max(1, min(1000, len(_processed_df[DATASET].index)-500)))}
+validation_indices = dict((dataset, sample(
+    list(_models_dict[dataset]['predictions'].keys()), max(1, min(1000, len(_processed_df[dataset].index)-500)))) for dataset in _processed_df)
 
 with open('./data/processed-data/validation_indices.json', 'w') as fp:
     json.dump(validation_indices, fp)
 
-validation_indices[DATASET] = set(validation_indices[DATASET])
+validation_indices = dict(
+    (dataset, set(validation_indices[dataset])) for dataset in validation_indices)
 
 with open('./data/processed-exp-data/validation_indices.pk', 'wb') as fp:
     pk.dump(validation_indices, fp)

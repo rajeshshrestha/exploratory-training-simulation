@@ -4,7 +4,7 @@ USE_VAL_DATA=true
 
 for DATASET in omdb airport
 do
-    for MAX_DIRTY_PROP in  0.5 0.3 0.2 0.1 0.05
+    for MAX_DIRTY_PROP in 0.05 0.1 0.3 0.5
     do
         echo "Dumping data.."
         python dump_processed_data.py --dataset $DATASET --max-dirty-prop $MAX_DIRTY_PROP
