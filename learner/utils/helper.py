@@ -230,8 +230,12 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
         if trainer_model is not None:
             mae_trainer_model_error += abs(fd_m.conf - trainer_model[fd])
 
+    '''Divide by number of fds'''
+    mae_ground_model_error = mae_ground_model_error/len(fd_metadata)
     logger.info(f"MAE Ground Model Conf Error: {mae_ground_model_error}")
+
     if trainer_model is not None:
+        mae_trainer_model_error = mae_trainer_model_error/len(fd_metadata)
         logger.info(f"MAE Trainer Model Conf Error: {mae_trainer_model_error}")
 
     '''Compute accuracy in Unserved dataset'''
