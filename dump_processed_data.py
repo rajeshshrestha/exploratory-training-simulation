@@ -22,7 +22,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--max-clean-num', default=1500, type=int)
 parser.add_argument('--max-dirty-prop', default=0.1, type=float)
 parser.add_argument('--dataset', default='airport', type=str)
-parser.add_argument('--scenario-id', default='11', type=str)
 
 args = parser.parse_args()
 print(args)
@@ -32,7 +31,7 @@ clean_max_num = args.max_clean_num
 dirty_sample_percentage = args.max_dirty_prop
 
 DATASET = args.dataset
-SCENARIO_ID = args.scenario_id
+SCENARIO_ID = "3" if DATASET == "omdb" else "11"
 
 # %% [markdown]
 # ## Read raw data

@@ -18,13 +18,12 @@ import argparse
 '''Parse arguments'''
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', default='airport', type=str)
-parser.add_argument('--scenario-id', default='11', type=str)
 
 args = parser.parse_args()
 print(args)
 
 DATASET = args.dataset
-SCENARIO_ID = args.scenario_id
+SCENARIO_ID = "3" if DATASET == "omdb" else "11"
 
 # %%
 data_path = f"./data/raw-data/{DATASET}-clean-full.csv"
@@ -141,21 +140,21 @@ for hypothesis, info_dict in zip(hypothesis_space, hypothesis_info):
     new_scenarios_dict[DATASET]['hypothesis_space'][hypothesis] = info_dict
 
 # %%
-for dataset in new_scenarios_dict:
-    new_scenarios_dict[dataset]['data_indices'] = [
-        str(x) for x in raw_df.index]
-    for hypothesis in new_scenarios_dict[dataset]['hypothesis_space']:
-        for val_type in ['supports', 'violations']:
-            for idx in new_scenarios_dict[dataset]['hypothesis_space'][hypothesis][val_type]:
 
-                if int(idx) in new_scenarios_dict[dataset]['hypothesis_space'][hypothesis][val_type][idx]:
-                    new_scenarios_dict[dataset]['hypothesis_space'][hypothesis][val_type][idx].remove(
-                        int(idx))
+new_scenarios_dict[DATASET]['data_indices'] = [
+    str(x) for x in raw_df.index]
+for hypothesis in new_scenarios_dict[DATASET]['hypothesis_space']:
+    for val_type in ['supports', 'violations']:
+        for idx in new_scenarios_dict[DATASET]['hypothesis_space'][hypothesis][val_type]:
 
-                '''Don't assign if the list contains self index'''
-                if new_scenarios_dict[dataset]['hypothesis_space'][hypothesis][val_type][idx] != []:
-                    new_scenarios_dict[dataset]['hypothesis_space'][hypothesis][val_type][idx] = [str(
-                        x) for x in new_scenarios_dict[dataset]['hypothesis_space'][hypothesis][val_type][idx] if str(x) != str(idx)]
+            if int(idx) in new_scenarios_dict[DATASET]['hypothesis_space'][hypothesis][val_type][idx]:
+                new_scenarios_dict[DATASET]['hypothesis_space'][hypothesis][val_type][idx].remove(
+                    int(idx))
+
+            '''Don't assign if the list contains self index'''
+            if new_scenarios_dict[DATASET]['hypothesis_space'][hypothesis][val_type][idx] != []:
+                new_scenarios_dict[DATASET]['hypothesis_space'][hypothesis][val_type][idx] = [str(
+                    x) for x in new_scenarios_dict[DATASET]['hypothesis_space'][hypothesis][val_type][idx] if str(x) != str(idx)]
 
 # %%
 new_scenarios_dict[DATASET][
