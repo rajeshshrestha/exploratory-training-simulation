@@ -6,7 +6,7 @@ import logging
 from flask import request
 from flask_restful import Resource
 from rich.console import Console
-from .initialize_variables import scenarios, processed_dfs, validation_indices_dict
+from .initialize_variables import scenarios, processed_dfs, validation_indices_dict, models_dict
 from .helper import StudyMetric, FDMeta, initialPrior
 import random
 
@@ -56,14 +56,19 @@ class Import(Resource):
 
         logger.info(initial_user_h)
 
-        new_project_id = trainer_prior_type+"_"+learner_prior_type+"_"+str(use_val_data)+"_" +\
+        project_base_dir = f"dataset={scenario_id}/use_val_data={use_val_data}/" +\
+            f"dirty-proportion={round(models_dict[scenario_id]['dirty_proportion'],2)}/" +\
+            f"trainer-prior-type={trainer_prior_type}-learner-prior-type=" +\
+            f"{learner_prior_type}"
+
+        new_project_id = project_base_dir+"/" +\
             trainer_type + "_" + sampling_method + \
             "_"+str(random.randint(1, 1e15))
         new_project_dir = './store/' + new_project_id
 
         # Save the new project
         try:
-            os.makedirs(f'./store/',
+            os.makedirs(f'./store/{project_base_dir}',
                         exist_ok=True)
             os.mkdir(new_project_dir)
         except OSError:
