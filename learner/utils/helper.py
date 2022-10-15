@@ -223,8 +223,6 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
             iter_num=current_iter, value=fd_m.conf, elapsed_time=elapsed_time))
         logger.info(f'FD: {fd}, conf: {fd_m.conf}, '
                     f'alpha: {fd_m.alpha}, beta: {fd_m.beta}')
-        # print(f'FD: {fd}, conf: {fd_m.conf}, '
-        #       f"true_conf: {models_dict['omdb']['model'][fd]}")
         mae_ground_model_error += abs(fd_m.conf -
                                       models_dict[scenario_id]['model'][fd])
         if trainer_model is not None:
