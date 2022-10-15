@@ -1,17 +1,28 @@
 from .full_oracle import FullOracleTrainer
-from .uninformed_bayesian import UninformedBayesianTrainer
+from .bayesian import BayesianTrainer
 from .learning_oracle import LearningOracleTrainer
 import re
 
 
 class TrainerModel:
-    def __init__(self, trainer_type,
+    def __init__(self,
+                 trainer_type,
+                 trainer_prior_type,
                  scenario_id,
                  project_id,
                  columns) -> None:
         assert trainer_type in ['full-oracle',
                                 'learning-oracle',
-                                'uninformed-bayesian'], f"Invalid trainer type: {trainer_type}"
+                                'bayesian'], f"Invalid trainer type: {trainer_type}"
+        self.trainer_type = trainer_type
+
+        assert trainer_prior_type in ['uniform-0.1',
+                                      'uniform-0.5',
+                                      'uniform-0.9',
+                                      'data_estimate',
+                                      'random'
+                                      ], f"Invalid Trainer Prior:{trainer_prior_type} type used!!!"
+        self.trainer_prior_type = trainer_prior_type
 
         if trainer_type == 'full-oracle':
             self.model = FullOracleTrainer(scenario_id=scenario_id,
@@ -23,14 +34,13 @@ class TrainerModel:
                                                columns=columns,
                                                initial_p=0.1,
                                                p_step=0.05)
-        elif trainer_type == 'uninformed-bayesian':
-            self.model = UninformedBayesianTrainer(scenario_id=scenario_id,
-                                                   project_id=project_id,
-                                                   columns=columns,
-                                                   p_max=0.9,
-                                                   alpha=1,
-                                                   beta=1,
-                                                   top_k=10)
+        elif trainer_type == 'bayesian':
+            self.model = BayesianTrainer(scenario_id=scenario_id,
+                                         project_id=project_id,
+                                         columns=columns,
+                                         prior_type=trainer_prior_type,
+                                         p_max=0.9,
+                                         top_k=10)
 
         '''Save columns on the data except the id column'''
         self.columns = columns

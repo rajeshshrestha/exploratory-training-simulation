@@ -9,19 +9,28 @@ from utils.interact_learner import send_feedback
 from user_models.trainer import TrainerModel
 
 
-def run(scenario_id, trainer_type, sampling_method, use_val_data):
+def run(scenario_id,
+        trainer_type,
+        sampling_method,
+        use_val_data,
+        trainer_prior_type,
+        learner_prior_type):
 
     # Initialize the learner
-    project_id, _ = initialize_learner(scenario_id=scenario_id,
-                                       sampling_method=sampling_method,
-                                       trainer_type=trainer_type,
-                                       use_val_data=use_val_data)
+    project_id, _ = initialize_learner(
+        scenario_id=scenario_id,
+        sampling_method=sampling_method,
+        trainer_type=trainer_type,
+        use_val_data=use_val_data,
+        trainer_prior_type=trainer_prior_type,
+        learner_prior_type=learner_prior_type,)
 
     # Get the first batch of sample from the learner
     data, columns, feedback = get_initial_sample(project_id=project_id)
 
     # initialize the trainer
     trainer = TrainerModel(trainer_type=trainer_type,
+                           trainer_prior_type=trainer_prior_type,
                            scenario_id=scenario_id,
                            project_id=project_id,
                            columns=columns)
@@ -45,12 +54,12 @@ def run(scenario_id, trainer_type, sampling_method, use_val_data):
 if __name__ == '__main__':
     '''
     Arg 1: Scenarios
-    Arg 2: Bayesian Type
-            Values: ["oracle", "informed", "uninformed"]
-    Arg 3: Decision Type
-            Values: ["coinflip", "threshold]
+    Arg 2: Trainer Type
+    Arg 3: Data Sampling method
     Arg 4: Number of runs
-    Arg 5: Whether precision or recall
+    Arg 5: Whether to use Validation data for interaction or not
+    Arg 6: Trainer Prior Type
+    Arg 7: Learner Prior Type
     '''
 
     # Scenario
@@ -60,10 +69,12 @@ if __name__ == '__main__':
     sampling_method = sys.argv[3]
     num_runs = int(sys.argv[4])  # How many runs of this simulation to do
     use_val_data = (sys.argv[5].lower() == 'true')
+    trainer_prior_type = sys.argv[6].lower()
+    learner_prior_type = sys.argv[7].lower()
 
     assert trainer_type in ['full-oracle',
                             'learning-oracle',
-                            'uninformed-bayesian'],\
+                            'bayesian'],\
         "Invalid trainer type passed!!!"
     assert sampling_method in ['RANDOM',
                                'ACTIVELR',
@@ -71,11 +82,26 @@ if __name__ == '__main__':
                                'STOCHASTICUS'],\
         "Invalid sampling method passed!!!"
 
+    assert trainer_prior_type in ['uniform-0.1',
+                                  'uniform-0.5',
+                                  'uniform-0.9',
+                                  'data_estimate',
+                                  'random'
+                                  ], "Invalid Trainer Prior type used!!!"
+    assert learner_prior_type in ['uniform-0.1',
+                                  'uniform-0.5',
+                                  'uniform-0.9',
+                                  'data_estimate',
+                                  'random'
+                                  ], "Invalid Learner Prior type used!!!"
+
     cpu_num = os.cpu_count()
 
     with Pool(cpu_num-1) as p:
         p.map(partial(run,
                       trainer_type=trainer_type,
                       sampling_method=sampling_method,
-                      use_val_data=use_val_data),
+                      use_val_data=use_val_data,
+                      trainer_prior_type=trainer_prior_type,
+                      learner_prior_type=learner_prior_type),
               [scenario_id for i in range(num_runs)])

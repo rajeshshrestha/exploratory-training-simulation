@@ -1,3 +1,4 @@
+from ast import Raise
 import json
 import os
 import pickle
@@ -36,6 +37,9 @@ class Import(Resource):
         sampling_method = request.form.get('sampling_method')
         trainer_type = request.form.get('trainer_type')
         use_val_data = (request.form.get('use_val_data').lower() == "true")
+        learner_prior_type = request.form.get('learner_prior_type')
+        trainer_prior_type = request.form.get('trainer_prior_type')
+
         if scenario_id is None or email is None:
             scenario_id = json.loads(request.data)['scenario_id']
             email = json.loads(request.data)['email']
@@ -47,15 +51,20 @@ class Import(Resource):
             trainer_type = json.loads(request.data)['trainer_type']
             use_val_data = (json.loads(request.data)[
                             'use_val_data'].lower() == 'true')
+            learner_prior_type = json.loads(request.data)['learner_prior_type']
+            trainer_prior_type = json.loads(request.data)['trainer_prior_type']
+
         logger.info(initial_user_h)
 
-        new_project_id = trainer_type + "_" + sampling_method + \
+        new_project_id = trainer_prior_type+"_"+learner_prior_type+"_"+str(use_val_data)+"_" +\
+            trainer_type + "_" + sampling_method + \
             "_"+str(random.randint(1, 1e15))
         new_project_dir = './store/' + new_project_id
 
         # Save the new project
         try:
-            os.makedirs('./store', exist_ok=True)
+            os.makedirs(f'./store/',
+                        exist_ok=True)
             os.mkdir(new_project_dir)
         except OSError:
             returned_data = {
@@ -93,7 +102,10 @@ class Import(Resource):
             'email': email,
             'scenario_id': scenario_id,
             'sampling_method': sampling_method,
-            'trainer_type': trainer_type
+            'trainer_type': trainer_type,
+            'use_val_data': use_val_data,
+            'trainer_prior_type': trainer_prior_type,
+            'learner_prior_type': learner_prior_type
         }
 
         with open(new_project_dir + '/project_info.json', 'w') as f:
@@ -103,7 +115,6 @@ class Import(Resource):
 
         data = processed_dfs[scenario_id]
         header = [col for col in data.columns if col != 'is_clean']
-        scenario = scenarios[scenario_id]
 
         # Initialize the iteration counter
         current_iter = 0
@@ -126,31 +137,11 @@ class Import(Resource):
                     col] = list()
                 interaction_metadata['feedback_recent'][idx][col] = False
 
-        # Initialize hypothesis parameters
-        fd_metadata = dict()
-        for h in scenario['hypothesis_space']:
-            mu = 0.1
-            if mu == 1:
-                mu = 0.99999
-            variance = 0.0025  # hyperparameter
-
-            # Calculate alpha and beta
-            alpha, beta = initialPrior(mu, variance)
-
-            # Initialize the FD metadata object
-            fd_m = FDMeta(
-                fd=h,
-                a=alpha,
-                b=beta,
-            )
-
-            logger.info('iter: 0'),
-            logger.info(f'alpha: {fd_m.alpha}')
-            logger.info(f'beta: {fd_m.beta}')
-
-            fd_metadata[h] = fd_m
-
         current_iter += 1
+
+        '''Initialize the learner model'''
+        fd_metadata = get_initial_fd_metadata(scenario_id=scenario_id,
+                                              prior_type=learner_prior_type)
 
         study_metrics = dict()
         # study_metrics['iter_err_precision'] = list()
@@ -202,3 +193,91 @@ class Import(Resource):
             'project_id': new_project_id
         }
         return response, 201, {'Access-Control-Allow-Origin': '*'}
+
+
+def get_initial_fd_metadata(scenario_id, prior_type):
+
+    scenario = scenarios[scenario_id]
+
+    # Initialize hypothesis parameters
+    fd_metadata = dict()
+
+    variance = 0.0025  # hyperparameter
+    logger.info(f"Initializing learner prior model with variance: {variance}")
+    if prior_type in ['uniform-0.1',
+                      'uniform-0.5',
+                      'uniform-0.9']:
+        mu = float(prior_type.split("-")[1])
+        logger.info(f"mu: {mu}")
+
+        for h in scenario['hypothesis_space']:
+
+            # Calculate alpha and beta
+            alpha, beta = initialPrior(mu, variance)
+
+            # Initialize the FD metadata object
+            fd_m = FDMeta(
+                fd=h,
+                a=alpha,
+                b=beta,
+            )
+
+            logger.info('iter: 0'),
+            logger.info(f'alpha: {fd_m.alpha}')
+            logger.info(f'beta: {fd_m.beta}')
+
+            fd_metadata[h] = fd_m
+
+    elif prior_type == 'random':
+        for h in scenario['hypothesis_space']:
+            mu = random.uniform(0, 1)
+            # Calculate alpha and beta
+            alpha, beta = initialPrior(mu, variance)
+
+            # Initialize the FD metadata object
+            fd_m = FDMeta(
+                fd=h,
+                a=alpha,
+                b=beta,
+            )
+
+            logger.info('iter: 0'),
+            logger.info(f"mu: {mu}")
+            logger.info(f'alpha: {fd_m.alpha}')
+            logger.info(f'beta: {fd_m.beta}')
+
+            fd_metadata[h] = fd_m
+
+    elif prior_type == 'data_estimate':
+        for h in scenario['hypothesis_space']:
+            mu = compute_hyp_conf_in_data(fd=h,
+                                          scenario_id=scenario_id)
+            # Calculate alpha and beta
+            alpha, beta = initialPrior(mu, variance)
+
+            # Initialize the FD metadata object
+            fd_m = FDMeta(
+                fd=h,
+                a=alpha,
+                b=beta,
+            )
+
+            logger.info('iter: 0'),
+            logger.info(f"mu: {mu}")
+            logger.info(f'alpha: {fd_m.alpha}')
+            logger.info(f'beta: {fd_m.beta}')
+
+            fd_metadata[h] = fd_m
+    else:
+        raise Exception(
+            f"Invalid prior type: {prior_type} specified for learner!!!")
+
+    return fd_metadata
+
+
+def compute_hyp_conf_in_data(fd, scenario_id):
+    scenario = scenarios[scenario_id]
+    support_num = len(scenario['hypothesis_space'][fd]['support_pairs'])
+    violation_num = len(scenario['hypothesis_space'][fd]['support_pairs'])
+
+    return support_num/(support_num+violation_num)

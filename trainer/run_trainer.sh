@@ -1,15 +1,18 @@
 #!/bin/bash
 RUNS=9
 USE_VAL_DATA=true
-python simulate.py omdb full-oracle RANDOM $RUNS $USE_VAL_DATA;
-python simulate.py omdb learning-oracle RANDOM $RUNS $USE_VAL_DATA;
-python simulate.py omdb uninformed-bayesian RANDOM $RUNS $USE_VAL_DATA;
-python simulate.py omdb full-oracle ACTIVELR $RUNS $USE_VAL_DATA;
-python simulate.py omdb learning-oracle ACTIVELR $RUNS $USE_VAL_DATA;
-python simulate.py omdb uninformed-bayesian ACTIVELR $RUNS $USE_VAL_DATA;
-python simulate.py omdb full-oracle STOCHASTICBR $RUNS $USE_VAL_DATA;
-python simulate.py omdb learning-oracle STOCHASTICBR $RUNS $USE_VAL_DATA;
-python simulate.py omdb uninformed-bayesian STOCHASTICBR $RUNS $USE_VAL_DATA;
-python simulate.py omdb full-oracle STOCHASTICUS $RUNS $USE_VAL_DATA;
-python simulate.py omdb learning-oracle STOCHASTICUS $RUNS $USE_VAL_DATA;
-python simulate.py omdb uninformed-bayesian STOCHASTICUS $RUNS $USE_VAL_DATA;
+TRAINER_PRIOR_TYPE=uniform-0.1
+LEARNER_PRIOR_TYPE=uniform-0.9
+
+python simulate.py omdb full-oracle RANDOM $RUNS $USE_VAL_DATA $TRAINER_PRIOR_TYPE $LEARNER_PRIOR_TYPE;
+python simulate.py omdb learning-oracle RANDOM $RUNS $USE_VAL_DATA $TRAINER_PRIOR_TYPE $LEARNER_PRIOR_TYPE;
+python simulate.py omdb bayesian RANDOM $RUNS $USE_VAL_DATA $TRAINER_PRIOR_TYPE $LEARNER_PRIOR_TYPE;
+python simulate.py omdb full-oracle ACTIVELR $RUNS $USE_VAL_DATA $TRAINER_PRIOR_TYPE $LEARNER_PRIOR_TYPE;
+python simulate.py omdb learning-oracle ACTIVELR $RUNS $USE_VAL_DATA $TRAINER_PRIOR_TYPE $LEARNER_PRIOR_TYPE;
+python simulate.py omdb bayesian ACTIVELR $RUNS $USE_VAL_DATA $TRAINER_PRIOR_TYPE $LEARNER_PRIOR_TYPE;
+python simulate.py omdb full-oracle STOCHASTICBR $RUNS $USE_VAL_DATA $TRAINER_PRIOR_TYPE $LEARNER_PRIOR_TYPE;
+python simulate.py omdb learning-oracle STOCHASTICBR $RUNS $USE_VAL_DATA $TRAINER_PRIOR_TYPE $LEARNER_PRIOR_TYPE;
+python simulate.py omdb bayesian STOCHASTICBR $RUNS $USE_VAL_DATA $TRAINER_PRIOR_TYPE $LEARNER_PRIOR_TYPE;
+python simulate.py omdb full-oracle STOCHASTICUS $RUNS $USE_VAL_DATA $TRAINER_PRIOR_TYPE $LEARNER_PRIOR_TYPE;
+python simulate.py omdb learning-oracle STOCHASTICUS $RUNS $USE_VAL_DATA $TRAINER_PRIOR_TYPE $LEARNER_PRIOR_TYPE;
+python simulate.py omdb bayesian STOCHASTICUS $RUNS $USE_VAL_DATA $TRAINER_PRIOR_TYPE $LEARNER_PRIOR_TYPE;

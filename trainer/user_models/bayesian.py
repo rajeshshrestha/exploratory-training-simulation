@@ -42,8 +42,12 @@ class FDMeta:
         }
 
 
-class UninformedBayesianTrainer:
-    def __init__(self, scenario_id, project_id, columns, p_max, alpha, beta, top_k) -> None:
+class BayesianTrainer:
+    def __init__(self,
+                 scenario_id,
+                 project_id,
+                 prior_type, columns,
+                 p_max, top_k, prior_variance=0.025) -> None:
 
         self.scenario_id = scenario_id
         self.project_id = project_id
@@ -54,13 +58,101 @@ class UninformedBayesianTrainer:
         '''Probability to stick with prediction from model'''
         self.p_max = p_max
 
-        self.fd_metadata = dict((fd, FDMeta(fd=fd, alpha=alpha, beta=beta))
-                                for fd in required_fds[self.scenario_id])
+        '''Initial variance of the prior model'''
+        self.prior_variance = prior_variance
+        self.prior_type = prior_type
+
+        self.fd_metadata = self.get_initial_fd_metadata()
 
         '''Create directory for storing model'''
         self.trainer_store_path = os.path.join(os.path.dirname(
             current_path), "trainer-store", self.project_id)
         os.makedirs(self.trainer_store_path)
+
+    def get_initial_fd_metadata(self):
+
+        scenario = scenarios[self.scenario_id]
+
+        # Initialize hypothesis parameters
+        fd_metadata = dict()
+
+        logger.info(
+            f"Initializing learner prior model with variance: {self.prior_variance}")
+        if self.prior_type in ['uniform-0.1',
+                               'uniform-0.5',
+                               'uniform-0.9']:
+            mu = float(self.prior_type.split("-")[1])
+            logger.info(f"mu: {mu}")
+
+            for h in scenario['hypothesis_space']:
+
+                # Calculate alpha and beta
+                alpha, beta = self.initialPrior(mu, self.prior_variance)
+
+                # Initialize the FD metadata object
+                fd_m = FDMeta(
+                    fd=h,
+                    alpha=alpha,
+                    beta=beta,
+                )
+
+                logger.info('iter: 0'),
+                logger.info(f'alpha: {fd_m.alpha}')
+                logger.info(f'beta: {fd_m.beta}')
+
+                fd_metadata[h] = fd_m
+
+        elif self.prior_type == 'random':
+            for h in scenario['hypothesis_space']:
+                mu = random.uniform(0, 1)
+                # Calculate alpha and beta
+                alpha, beta = self.initialPrior(mu, self.prior_variance)
+
+                # Initialize the FD metadata object
+                fd_m = FDMeta(
+                    fd=h,
+                    alpha=alpha,
+                    beta=beta,
+                )
+
+                logger.info('iter: 0'),
+                logger.info(f"mu: {mu}")
+                logger.info(f'alpha: {fd_m.alpha}')
+                logger.info(f'beta: {fd_m.beta}')
+
+                fd_metadata[h] = fd_m
+
+        elif self.prior_type == 'data_estimate':
+            for h in scenario['hypothesis_space']:
+                mu = self.compute_hyp_conf_in_data()
+                # Calculate alpha and beta
+                alpha, beta = self.initialPrior(mu, self.prior_variance)
+
+                # Initialize the FD metadata object
+                fd_m = FDMeta(
+                    fd=h,
+                    alpha=alpha,
+                    beta=beta,
+                )
+
+                logger.info('iter: 0'),
+                logger.info(f"mu: {mu}")
+                logger.info(f'alpha: {fd_m.alpha}')
+                logger.info(f'beta: {fd_m.beta}')
+
+                fd_metadata[h] = fd_m
+        else:
+            raise Exception(
+                f"Invalid prior type: {self.prior_type} specified for learner!!!")
+
+        return fd_metadata
+
+    def compute_hyp_conf_in_data(self, fd):
+        scenario = scenarios[self.scenario_id]
+        support_num = len(scenario['hypothesis_space'][fd]['support_pairs'])
+        violation_num = len(scenario['hypothesis_space'][fd]['support_pairs'])
+
+        return support_num/(support_num+violation_num)
 
     def get_model_dict(self):
         return dict((fd, fd_metadata.to_dict())
