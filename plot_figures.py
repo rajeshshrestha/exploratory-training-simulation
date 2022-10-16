@@ -133,28 +133,30 @@ def plot_figures(run_folder_path):
 
     figures = []
     figure_names = []
-    for metric in ['accuracy', 'recall', 'precision', 'f1', 'mae_ground_model_error', 'mae_trainer_model_error']:
+    # for metric in ['accuracy', 'recall', 'precision', 'f1', 'mae_ground_model_error', 'mae_trainer_model_error']:
+    for metric in ['mae_trainer_model_error']:
         for trainer_type in ['bayesian']:
             try:
-                fig = plt.figure(figsize=(12, 7))
+                fig = plt.figure(figsize=(6, 4))
                 for sampling_method in average_dict[trainer_type]:
                     plt.plot(average_dict[trainer_type][sampling_method]
-                             [f'iter_{metric}'][0], average_dict[trainer_type][sampling_method][f'iter_{metric}'][2], label=sampling_method)
+                             [f'iter_{metric}'][0], average_dict[trainer_type][sampling_method][f'iter_{metric}'][2], label='US' if sampling_method == "ActiveLR" else sampling_method)
                 plt.xlabel('Iterations')
                 if metric == 'mae_ground_model_error':
-                    plt.ylabel("MAE")
-                    plt.title(
-                        "Difference between Ground Model and Learner Model")
+                    plt.ylabel("Mean Absolute Error(MAE)")
+                    # plt.title(
+                    #     "Difference between Ground Model and Learner Model")
                 elif metric == 'mae_trainer_model_error':
-                    plt.ylabel("MAE")
-                    plt.title(
-                        "Difference between Trainer Model and Learner Model")
+                    plt.ylabel("Mean Absolute Error(MAE)")
+                    # plt.title(
+                    #     "Difference between Trainer Model and Learner Model")
                 else:
                     plt.ylabel(metric)
-                    plt.title(
-                        "Predictions between the Learner and the Ground Truth Model")
+                    # plt.title(
+                    #     "Predictions between the Learner and the Ground Truth Model")
                 plt.ylim(bottom=0)
                 plt.legend()
+                plt.tight_layout()
 
                 figures.append(fig)
                 figure_names.append(f'{trainer_type}_{metric}.png')
