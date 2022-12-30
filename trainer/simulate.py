@@ -72,6 +72,11 @@ if __name__ == '__main__':
     trainer_prior_type = sys.argv[6].lower()
     learner_prior_type = sys.argv[7].lower()
 
+    if len(sys.argv) > 8:
+        run_parallel = (sys.argv[8].lower() == 'true')
+    else:
+        run_parallel = False
+
     assert trainer_type in ['full-oracle',
                             'learning-oracle',
                             'bayesian'],\
@@ -95,13 +100,21 @@ if __name__ == '__main__':
                                   'random'
                                   ], "Invalid Learner Prior type used!!!"
 
-    cpu_num = os.cpu_count()
-
-    with Pool(cpu_num-1) as p:
-        p.map(partial(run,
-                      trainer_type=trainer_type,
-                      sampling_method=sampling_method,
-                      use_val_data=use_val_data,
-                      trainer_prior_type=trainer_prior_type,
-                      learner_prior_type=learner_prior_type),
-              [scenario_id for i in range(num_runs)])
+    if not run_parallel:
+        for i in range(num_runs):
+            run(scenario_id=scenario_id,
+                trainer_type=trainer_type,
+                sampling_method=sampling_method,
+                use_val_data=use_val_data,
+                trainer_prior_type=trainer_prior_type,
+                learner_prior_type=learner_prior_type)
+    else:
+        cpu_num = os.cpu_count()
+        with Pool(cpu_num-1) as p:
+            p.map(partial(run,
+                          trainer_type=trainer_type,
+                          sampling_method=sampling_method,
+                          use_val_data=use_val_data,
+                          trainer_prior_type=trainer_prior_type,
+                          learner_prior_type=learner_prior_type),
+                  [scenario_id for i in range(num_runs)])

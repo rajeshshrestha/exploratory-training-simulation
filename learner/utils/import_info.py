@@ -71,6 +71,10 @@ class Import(Resource):
             os.makedirs(f'./store/{project_base_dir}',
                         exist_ok=True)
             os.mkdir(new_project_dir)
+            os.makedirs(f'{new_project_dir}/iteration_fd_metadata/trainer',
+                        exist_ok=True)
+            os.makedirs(f'{new_project_dir}/iteration_fd_metadata/learner',
+                        exist_ok=True)
         except OSError:
             returned_data = {
                 'msg': '[ERROR] Unable to create a directory for this project.'
@@ -162,6 +166,11 @@ class Import(Resource):
         study_metrics['iter_mae_ground_model_error'] = list()
         study_metrics['iter_mae_trainer_model_error'] = list()
         study_metrics['elapsed_time'] = list()
+        study_metrics['iter_accuracy_converged'] = list()
+        study_metrics['iter_recall_converged'] = list()
+        study_metrics['iter_precision_converged'] = list()
+        study_metrics['iter_f1_converged'] = list()
+
         json.dump(study_metrics,
                   open(new_project_dir + '/study_metrics.json', 'w'))
 
@@ -177,8 +186,12 @@ class Import(Resource):
                     open(new_project_dir + '/tuple_weights.pk', 'wb'))
         pickle.dump(fd_metadata,
                     open(new_project_dir + '/fd_metadata.pk', 'wb'))
+
         pickle.dump(current_iter,
                     open(new_project_dir + '/current_iter.pk', 'wb'))
+        model_dict = dict((fd, fd_m.conf)for fd, fd_m in fd_metadata.items())
+        pickle.dump(model_dict,
+                    open(f'{new_project_dir}/iteration_fd_metadata/learner/model_0.pk', 'wb'))
 
         if use_val_data:
             logger.info(

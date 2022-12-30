@@ -1,8 +1,9 @@
 #!/bin/bash
-RUNS=9
-USE_VAL_DATA=true
+RUNS=7
+USE_VAL_DATA=false
+RUN_PARALLEL_SIMULATION=true
 
-for DATASET in airport omdb
+for DATASET in omdb
 do
     for MAX_DIRTY_PROP in 0.5 0.3 0.1 0.05
     do
@@ -24,7 +25,7 @@ do
                     for SAMPLING_TYPE  in RANDOM ACTIVELR STOCHASTICBR STOCHASTICUS
                     do
                         echo "Running simulation for $DATASET $TRAINER_TYPE $SAMPLING_TYPE $RUNS $USE_VAL_DATA $TRAINER_PRIOR_TYPE $LEARNER_PRIOR_TYPE"
-                        python simulate.py $DATASET $TRAINER_TYPE $SAMPLING_TYPE $RUNS $USE_VAL_DATA $TRAINER_PRIOR_TYPE $LEARNER_PRIOR_TYPE
+                        python simulate.py $DATASET $TRAINER_TYPE $SAMPLING_TYPE $RUNS $USE_VAL_DATA $TRAINER_PRIOR_TYPE $LEARNER_PRIOR_TYPE $RUN_PARALLEL_SIMULATION
                     done
                     
                 done

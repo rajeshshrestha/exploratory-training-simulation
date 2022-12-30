@@ -1,6 +1,7 @@
 import json
 import pickle
 import logging
+from copy import deepcopy
 
 from .initialize_variables import scenarios
 from .initialize_variables import models_dict
@@ -241,7 +242,7 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
     val_idxs = validation_indices_dict[scenario_id]
     accuracy, recall, precision, f1 = compute_metrics(
         indices=val_idxs,
-        model=model_dict,
+        model=deepcopy(model_dict),
         scenario_id=scenario_id,
         top_k=MODEL_FDS_TOP_K)
     logger.info(
@@ -251,7 +252,7 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
     logger.info(
         "=============================================================================")
     study_metrics = json.load(
-        open('./store/' + project_id + '/study_metrics.json', 'rb'))
+        open('./store/' + project_id + '/study_metrics.json', 'r'))
     study_metrics['iter_accuracy'].append(accuracy)
     study_metrics['iter_recall'].append(recall)
     study_metrics['iter_precision'].append(precision)
@@ -268,10 +269,13 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
     # Save updated alpha/beta metrics
     pickle.dump(fd_metadata, open(
         './store/' + project_id + '/fd_metadata.pk', 'wb'))
+    pickle.dump(model_dict, open(
+        f'./store/{project_id}/iteration_fd_metadata/learner/model_{current_iter}.pk', 'wb'))
+    pickle.dump(trainer_model, open(
+        f'./store/{project_id}/iteration_fd_metadata/trainer/model_{current_iter}.pk', 'wb'))
 
 
 # Build a sample
-
 def buildSample(data, sample_size, project_id,
                 sampling_method,
                 resample):

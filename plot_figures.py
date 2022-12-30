@@ -21,6 +21,10 @@ def read_metrics(run_folder_path):
                    'iter_recall': [],
                    'iter_precision': [],
                    'iter_f1': [],
+                   'iter_accuracy_converged': [],
+                   'iter_recall_converged': [],
+                   'iter_precision_converged': [],
+                   'iter_f1_converged': [],
                    'iter_mae_ground_model_error': [],
                    'iter_mae_trainer_model_error': []
                    },
@@ -28,6 +32,10 @@ def read_metrics(run_folder_path):
                      'iter_recall': [],
                      'iter_precision': [],
                      'iter_f1': [],
+                     'iter_accuracy_converged': [],
+                     'iter_recall_converged': [],
+                     'iter_precision_converged': [],
+                     'iter_f1_converged': [],
                      'iter_mae_ground_model_error': [],
                      'iter_mae_trainer_model_error': []
                      },
@@ -35,6 +43,10 @@ def read_metrics(run_folder_path):
                          'iter_recall': [],
                          'iter_precision': [],
                          'iter_f1': [],
+                         'iter_accuracy_converged': [],
+                         'iter_recall_converged': [],
+                         'iter_precision_converged': [],
+                         'iter_f1_converged': [],
                          'iter_mae_ground_model_error': [],
                          'iter_mae_trainer_model_error': []
                          },
@@ -42,6 +54,10 @@ def read_metrics(run_folder_path):
                          'iter_recall': [],
                          'iter_precision': [],
                          'iter_f1': [],
+                         'iter_accuracy_converged': [],
+                         'iter_recall_converged': [],
+                         'iter_precision_converged': [],
+                         'iter_f1_converged': [],
                          'iter_mae_ground_model_error': [],
                          'iter_mae_trainer_model_error': []
                          }
@@ -52,7 +68,16 @@ def read_metrics(run_folder_path):
             trainer_type, sampling_method, _ = folder.split("_")
             with open(os.path.join(run_folder_path, folder, "study_metrics.json"), 'r') as fp:
                 study_metrics = json.load(fp)
-                for metric_type in ['iter_accuracy', 'iter_recall', 'iter_precision', 'iter_f1', 'iter_mae_ground_model_error', 'iter_mae_trainer_model_error']:
+                for metric_type in ['iter_accuracy',
+                                    'iter_recall',
+                                    'iter_precision',
+                                    'iter_f1',
+                                    'iter_mae_ground_model_error',
+                                    'iter_mae_trainer_model_error',
+                                    'iter_accuracy_converged',
+                                    'iter_recall_converged',
+                                    'iter_precision_converged',
+                                    'iter_f1_converged']:
                     folder_name = None
                     if sampling_method == 'RANDOM':
                         folder_name = 'Random'
@@ -76,6 +101,10 @@ def compute_average_metrics(results_dict):
                    'iter_recall': [],
                    'iter_precision': [],
                    'iter_f1': [],
+                   'iter_accuracy_converged': [],
+                   'iter_recall_converged': [],
+                   'iter_precision_converged': [],
+                   'iter_f1_converged': [],
                    'iter_mae_ground_model_error': [],
                    'iter_mae_trainer_model_error': []
                    },
@@ -83,6 +112,10 @@ def compute_average_metrics(results_dict):
                      'iter_recall': [],
                      'iter_precision': [],
                      'iter_f1': [],
+                     'iter_accuracy_converged': [],
+                     'iter_recall_converged': [],
+                     'iter_precision_converged': [],
+                     'iter_f1_converged': [],
                      'iter_mae_ground_model_error': [],
                      'iter_mae_trainer_model_error': []
                      },
@@ -90,6 +123,10 @@ def compute_average_metrics(results_dict):
                          'iter_recall': [],
                          'iter_precision': [],
                          'iter_f1': [],
+                         'iter_accuracy_converged': [],
+                         'iter_recall_converged': [],
+                         'iter_precision_converged': [],
+                         'iter_f1_converged': [],
                          'iter_mae_ground_model_error': [],
                          'iter_mae_trainer_model_error': []
                          },
@@ -97,6 +134,10 @@ def compute_average_metrics(results_dict):
                          'iter_recall': [],
                          'iter_precision': [],
                          'iter_f1': [],
+                         'iter_accuracy_converged': [],
+                         'iter_recall_converged': [],
+                         'iter_precision_converged': [],
+                         'iter_f1_converged': [],
                          'iter_mae_ground_model_error': [],
                          'iter_mae_trainer_model_error': []
                          }
@@ -104,7 +145,14 @@ def compute_average_metrics(results_dict):
 
     for trainer_type in ['full-oracle', 'learning-oracle', 'bayesian']:
         for sampling_type in ['Random', 'ActiveLR', 'StochasticBR', 'StochasticUS']:
-            for metric_type in ['iter_accuracy', 'iter_recall', 'iter_precision', 'iter_f1', 'iter_mae_ground_model_error', 'iter_mae_trainer_model_error']:
+            for metric_type in ['iter_accuracy', 'iter_recall',
+                                'iter_precision', 'iter_f1',
+                                'iter_accuracy_converged',
+                                'iter_recall_converged',
+                                'iter_precision_converged',
+                                'iter_f1_converged',
+                                'iter_mae_ground_model_error',
+                                'iter_mae_trainer_model_error']:
                 for exp_metrics_lst in zip(*results_dict[trainer_type][sampling_type][metric_type]):
                     average_lst = []
                     # print(exp_metrics_lst)
@@ -133,8 +181,17 @@ def plot_figures(run_folder_path):
 
     figures = []
     figure_names = []
-    # for metric in ['accuracy', 'recall', 'precision', 'f1', 'mae_ground_model_error', 'mae_trainer_model_error']:
-    for metric in ['mae_trainer_model_error']:
+    for metric in ['accuracy',
+                   'recall',
+                   'precision',
+                   'f1',
+                   'accuracy_converged',
+                   'recall_converged',
+                   'precision_converged',
+                   'f1_converged',
+                   'mae_ground_model_error',
+                   'mae_trainer_model_error']:
+        # for metric in ['mae_trainer_model_error', 'mae_ground_model_error']:
         for trainer_type in ['bayesian']:
             try:
                 fig = plt.figure(figsize=(6, 4))

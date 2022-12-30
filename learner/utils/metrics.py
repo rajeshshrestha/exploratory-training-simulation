@@ -10,17 +10,25 @@ from .initialize_variables import models_dict
 logger = logging.getLogger(__file__)
 
 
-def compute_conditional_clean_prob(idx, fd, fd_prob, scenario_id, data_indices=None):
+def compute_conditional_clean_prob(idx,
+                                   fd,
+                                   fd_prob,
+                                   scenario_id,
+                                   data_indices=None):
     if data_indices is None:
         compliance_num = len(
             scenarios[scenario_id]['hypothesis_space'][fd]['supports'].get(idx, []))
         violation_num = len(
             scenarios[scenario_id]['hypothesis_space'][fd]['violations'].get(idx, []))
     else:
-        compliance_num = len([idx_ for idx_ in scenarios[scenario_id]['hypothesis_space']
-                             [fd]['supports'].get(idx, []) if idx_ in data_indices])
-        violation_num = len([idx_ for idx_ in scenarios[scenario_id]['hypothesis_space']
-                            [fd]['violations'].get(idx, []) if idx_ in data_indices])
+        compliance_num = len([idx_ for idx_ in
+                              scenarios[scenario_id]['hypothesis_space']
+                              [fd]['supports'].get(idx, []) if idx_ in
+                              data_indices])
+        violation_num = len([idx_ for idx_ in
+                             scenarios[scenario_id]['hypothesis_space']
+                            [fd]['violations'].get(idx, []) if idx_ in
+                             data_indices])
 
     tuple_clean_score = math.exp(fd_prob*(compliance_num-violation_num))
     tuple_dirty_score = math.exp(fd_prob*(-compliance_num+violation_num))
@@ -53,6 +61,43 @@ def compute_metrics(indices, model, scenario_id, top_k):
     idxs = list(conditional_clean_probability_dict.keys())
     is_dirty_true_labels = [not models_dict[scenario_id]["predictions"][idx]
                             for idx in idxs]
+    is_dirty_predicted_labels = [conditional_clean_probability_dict[idx] < 0.5
+                                 for idx in idxs]
+    is_correct = [true_val == predicted_val for true_val, predicted_val
+                  in zip(is_dirty_true_labels, is_dirty_predicted_labels)]  # ignore indices with probability=0.5 as this means most probably, there wasn't any compliance and violations in the validation data for the tuple
+    true_positive = [true_val and predicted_val for true_val, predicted_val
+                     in zip(is_dirty_true_labels, is_dirty_predicted_labels)]
+
+    accuracy = np.mean(is_correct)
+    recall = sum(true_positive)/(sum(is_dirty_true_labels)+1e-7)
+    precision = sum(true_positive)/(sum(is_dirty_predicted_labels)+1e-7)
+    f1 = 2*recall*precision/(recall+precision+1e-7)
+
+    return accuracy, recall, precision, f1
+
+
+def compute_metrics_using_converged_trainer_model(indices, model,
+                                                  converged_trainer_model,
+                                                  scenario_id,
+                                                  top_k):
+    '''Pick top k fds if needed'''
+    if 0 < top_k < len(model):
+        model = dict(sorted(model.items(), key=itemgetter(1),
+                     reverse=True)[:top_k])
+        converged_trainer_model = dict(sorted(converged_trainer_model.items(),
+                                              key=itemgetter(1), reverse=True)[:top_k])
+
+    conditional_clean_probability_dict = get_average_cond_clean_prediction(
+        indices=indices, model=model, scenario_id=scenario_id)
+    ground_conditional_clean_probability_dict = \
+        get_average_cond_clean_prediction(indices=indices,
+                                          model=converged_trainer_model,
+                                          scenario_id=scenario_id)
+    logger.info(conditional_clean_probability_dict)
+
+    idxs = list(conditional_clean_probability_dict.keys())
+    is_dirty_true_labels = [
+        ground_conditional_clean_probability_dict[idx] < 0.5 for idx in idxs]
     is_dirty_predicted_labels = [conditional_clean_probability_dict[idx] < 0.5
                                  for idx in idxs]
     is_correct = [true_val == predicted_val for true_val, predicted_val
