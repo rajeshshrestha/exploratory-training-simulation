@@ -172,6 +172,41 @@ def compute_average_metrics(results_dict):
     return average_dict
 
 
+def print_metrics(run_folder_path, print_intervals=[0, 0.1, 0.5, 0.9, 1.0]):
+    '''Read run folder'''
+    results_dict = read_metrics(run_folder_path=run_folder_path)
+
+    '''Compute average dict'''
+    average_dict = compute_average_metrics(results_dict=results_dict)
+
+    prior_type = run_folder_path.split("/")[-1]
+    print("*****************************************************************************")
+    print(f"Prior Type: {prior_type}")
+    print("*****************************************************************************")
+
+    for trainer_type in ['bayesian']:
+        for metric in ['accuracy_converged',
+                       'recall_converged',
+                       'precision_converged',
+                       'f1_converged']:
+            print(
+                f"Trainer Type: {trainer_type} Metric: {metric}")
+            for interval in print_intervals:
+                print_str = "Iteration Fraction: %.2f "%round(interval,2)
+                for sampling_method in average_dict[trainer_type]:
+                    total_iter = len(
+                        average_dict[trainer_type][sampling_method][f'iter_{metric}'][0])-1
+                    
+                    if total_iter < 0:
+                        continue
+                    
+                    iter = int(total_iter*interval)
+                    print_str += f"{sampling_method}: %.2f "%round(average_dict[trainer_type][sampling_method][f'iter_{metric}'][2][iter], 3)
+                print(print_str)
+            print("-------------------------------------------------------------------")
+    print("========================================================================")
+
+
 def plot_figures(run_folder_path):
     '''Read run folder'''
     results_dict = read_metrics(run_folder_path=run_folder_path)
@@ -253,6 +288,7 @@ if __name__ == "__main__":
                         "-learner-prior-type=", "_learner-prior-type=").split("_")
                     run_dir = os.path.join(dir2, prior_folder)
                     figures, figure_names = plot_figures(run_dir)
+                    print_metrics(run_dir)
 
                     fig_save_dir = os.path.join(
                         fig_save_base_dir,
