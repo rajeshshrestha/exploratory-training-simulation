@@ -10,43 +10,6 @@ import os
 from tqdm import tqdm
 import argparse
 
-# %% [markdown]
-# ## Read raw data
-
-# %%
-
-'''Parse arguments'''
-parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', default='airport', type=str)
-
-args = parser.parse_args()
-print(args)
-
-DATASET = args.dataset
-SCENARIO_ID = "3" if DATASET == "omdb" else "11"
-
-# %%
-data_path = f"./data/raw-data/{DATASET}-clean-full.csv"
-
-raw_df = pd.read_csv(data_path)
-raw_df.rename(columns=dict((col, col.lower())
-              for col in raw_df.columns), inplace=True)
-raw_df.index = raw_df.index.map(str)
-raw_df.head()
-
-
-# %%
-# Read Scenario3 info for the functional dependencies
-
-with open("./scenarios.json", 'r') as fp:
-    scenarios = json.load(fp)
-required_scenario_info = scenarios[SCENARIO_ID]
-hypothesis_space = [hypothesis['cfd']
-                    for hypothesis in required_scenario_info['hypothesis_space']]
-
-# %% [markdown]
-# ## Add info to new scenarios dict and dump the file
-
 # %%
 
 
@@ -61,6 +24,9 @@ def parse_hypothesis(fd):
     right_attributes = [attribute.strip() for attribute in right_attributes]
 
     return left_attributes, right_attributes
+
+# %% [markdown]
+# ## Add info to new scenarios dict and dump the file
 
 # %%
 
@@ -118,16 +84,57 @@ def get_hypothesis_info_dict(hypothesis):
     return info_dict
 
 
+# %% [markdown]
+# ## Read raw data
+
+# %%
+
+'''Parse arguments'''
+parser = argparse.ArgumentParser()
+parser.add_argument('--dataset', default='airport', type=str)
+
+args = parser.parse_args()
+print(args)
+
+DATASET = args.dataset
+assert DATASET in ['airport', 'omdb', 'tax', 'hospital'], f"Invalid dataset: {DATASET} passed"
+
+# %%
+data_path = f"./data/raw-data/{DATASET}-clean-full.csv"
+
+raw_df = pd.read_csv(data_path)
+raw_df.rename(columns=dict((col, col.lower())
+              for col in raw_df.columns), inplace=True)
+raw_df.index = raw_df.index.map(str)
+raw_df.head()
+
+
+# %%
+# Read Scenario3 info for the functional dependencies
+
+with open("./scenarios.json", 'r') as fp:
+    scenarios = json.load(fp)
+required_scenario_info = scenarios[DATASET]
+tmp_hypothesis_space = [hypothesis['cfd']
+                    for hypothesis in required_scenario_info['hypothesis_space']]
+
+
+hypothesis_space = []
+relevant_cols = set()
+for hyp in tmp_hypothesis_space:
+    lhs, rhs = parse_hypothesis(hyp)
+    if len(lhs+rhs) not in [3, 4]:
+        continue
+    hypothesis_space.append(hyp)
+    relevant_cols |= (set(lhs) | set(rhs))
+
+raw_df = raw_df[list(relevant_cols)]
+if len(raw_df) > 3000:
+    raw_df = raw_df.sample(n=3000).reset_index(drop=True)
 # %%
 cpu_num = os.cpu_count()
 
-# %%
-if os.path.exists("./new_scenarios.json"):
-    print("Reading already exisitng scenarios file")
-    with open("./new_scenarios.json", 'r') as fp:
-        new_scenarios_dict = json.load(fp)
-else:
-    new_scenarios_dict = dict()
+new_scenarios_dict = dict()
 
 new_scenarios_dict[DATASET] = dict()
 new_scenarios_dict[DATASET]['hypothesis_space'] = dict()
@@ -161,5 +168,13 @@ new_scenarios_dict[DATASET][
     'processed_dataset_path'] = F"data/processed-data/{DATASET}-sampled.csv"
 new_scenarios_dict[DATASET]['raw_dataset_path'] = F"data/raw-data/{DATASET}-clean-full.csv"
 
+# %%
+if os.path.exists("./new_scenarios.json"):
+    print("Reading already exisitng scenarios file")
+    with open("./new_scenarios.json", 'r') as fp:
+        scenarios_dict = json.load(fp)
+
+scenarios_dict[DATASET] = new_scenarios_dict[DATASET]
+
 with open("./new_scenarios.json", 'w') as fp:
-    json.dump(new_scenarios_dict, fp)
+    json.dump(scenarios_dict, fp)

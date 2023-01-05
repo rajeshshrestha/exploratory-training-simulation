@@ -31,7 +31,7 @@ clean_max_num = args.max_clean_num
 dirty_sample_percentage = args.max_dirty_prop
 
 DATASET = args.dataset
-SCENARIO_ID = "3" if DATASET == "omdb" else "11"
+assert DATASET in ['airport', 'omdb', 'tax', 'hospital'], f"Invalid dataset: {DATASET} passed"
 
 # %% [markdown]
 # ## Read raw data
@@ -49,7 +49,7 @@ raw_df.index = raw_df.index.map(str)
 
 with open("./scenarios.json", 'r') as fp:
     scenarios = json.load(fp)
-required_scenario_info = scenarios[SCENARIO_ID]
+required_scenario_info = scenarios[DATASET]
 hypothesis_space = [hypothesis['cfd']
                     for hypothesis in required_scenario_info['hypothesis_space']]
 
