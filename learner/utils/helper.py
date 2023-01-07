@@ -10,7 +10,7 @@ from .metrics import compute_metrics
 from .sampling_policy import returnRandomTuples, returnActiveLearningTuples
 from .sampling_policy import returnStochasticBRTuples
 from .sampling_policy import returnStochasticActiveLRTuples
-from .env_variables import MODEL_FDS_TOP_K
+from .env_variables import MODEL_FDS_TOP_K, STORE_BASE_PATH
 
 
 # Calculate the initial prior (alpha/beta) for an FD
@@ -119,10 +119,10 @@ class CellFeedback(object):
 def recordFeedback(data, feedback, project_id, current_iter,
                    current_time):
     interaction_metadata = pickle.load(
-        open('./store/' + project_id + '/interaction_metadata.pk', 'rb'))
-    # study_metrics = json.load( open('./store/' + project_id + '/study_metrics.json', 'r') )
+        open(f'{STORE_BASE_PATH}/' + project_id + '/interaction_metadata.pk', 'rb'))
+    # study_metrics = json.load( open(f'{STORE_BASE_PATH}/' + project_id + '/study_metrics.json', 'r') )
     start_time = pickle.load(
-        open('./store/' + project_id + '/start_time.pk', 'rb'))
+        open(f'{STORE_BASE_PATH}/' + project_id + '/start_time.pk', 'rb'))
 
     # Calculate elapsed time
     elapsed_time = current_time - start_time
@@ -144,7 +144,7 @@ def recordFeedback(data, feedback, project_id, current_iter,
     logger.info('*** Latest feedback saved ***')
 
     pickle.dump(interaction_metadata, open(
-        './store/' + project_id + '/interaction_metadata.pk', 'wb'))
+        f'{STORE_BASE_PATH}/' + project_id + '/interaction_metadata.pk', 'wb'))
     logger.info('*** Interaction metadata updates saved ***')
 
 
@@ -154,10 +154,10 @@ def recordFeedback(data, feedback, project_id, current_iter,
 def interpretFeedback(s_in, feedback, project_id, current_iter,
                       current_time, trainer_model=None):
     fd_metadata = pickle.load(
-        open('./store/' + project_id + '/fd_metadata.pk', 'rb'))
+        open(f'{STORE_BASE_PATH}/' + project_id + '/fd_metadata.pk', 'rb'))
     start_time = pickle.load(
-        open('./store/' + project_id + '/start_time.pk', 'rb'))
-    with open('./store/' + project_id + '/project_info.json', 'r') as f:
+        open(f'{STORE_BASE_PATH}/' + project_id + '/start_time.pk', 'rb'))
+    with open(f'{STORE_BASE_PATH}/' + project_id + '/project_info.json', 'r') as f:
         project_info = json.load(f)
         scenario_id = project_info['scenario_id']
 
@@ -252,7 +252,7 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
     logger.info(
         "=============================================================================")
     study_metrics = json.load(
-        open('./store/' + project_id + '/study_metrics.json', 'r'))
+        open(f'{STORE_BASE_PATH}/' + project_id + '/study_metrics.json', 'r'))
     study_metrics['iter_accuracy'].append(accuracy)
     study_metrics['iter_recall'].append(recall)
     study_metrics['iter_precision'].append(precision)
@@ -264,15 +264,15 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
             mae_trainer_model_error)
 
     json.dump(study_metrics,
-              open('./store/' + project_id + '/study_metrics.json', 'w'))
+              open(f'{STORE_BASE_PATH}/' + project_id + '/study_metrics.json', 'w'))
 
     # Save updated alpha/beta metrics
     pickle.dump(fd_metadata, open(
-        './store/' + project_id + '/fd_metadata.pk', 'wb'))
+        f'{STORE_BASE_PATH}/' + project_id + '/fd_metadata.pk', 'wb'))
     pickle.dump(model_dict, open(
-        f'./store/{project_id}/iteration_fd_metadata/learner/model_{current_iter}.pk', 'wb'))
+        f'{STORE_BASE_PATH}/{project_id}/iteration_fd_metadata/learner/model_{current_iter}.pk', 'wb'))
     pickle.dump(trainer_model, open(
-        f'./store/{project_id}/iteration_fd_metadata/trainer/model_{current_iter}.pk', 'wb'))
+        f'{STORE_BASE_PATH}/{project_id}/iteration_fd_metadata/trainer/model_{current_iter}.pk', 'wb'))
 
 
 # Build a sample

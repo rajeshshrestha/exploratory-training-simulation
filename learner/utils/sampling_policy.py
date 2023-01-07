@@ -22,12 +22,12 @@ from .env_variables import STOCHASTIC_UNCERTAINTY_SAMPLING_GAMMA
 def returnStochasticBRTuples(sample_size, project_id, resample=False):
     '''Read current fd metadata of the project'''
     fd_metadata = pickle.load(
-        open('./store/' + project_id + '/fd_metadata.pk', 'rb'))
+        open(f'{STORE_BASE_PATH}/' + project_id + '/fd_metadata.pk', 'rb'))
 
     unserved_indices = pickle.load(
-        open('./store/' + project_id + '/unserved_indices.pk', 'rb'))
+        open(f'{STORE_BASE_PATH}/' + project_id + '/unserved_indices.pk', 'rb'))
 
-    with open('./store/' + project_id + '/project_info.json', 'r') as f:
+    with open(f'{STORE_BASE_PATH}/' + project_id + '/project_info.json', 'r') as f:
         project_info = json.load(f)
         scenario_id = project_info['scenario_id']
 
@@ -104,7 +104,7 @@ def returnStochasticBRTuples(sample_size, project_id, resample=False):
 # Return Random sampling of tuples:
 def returnRandomTuples(sample_size, project_id, resample=False):
     if resample:
-        with open('./store/' + project_id + '/project_info.json', 'r') as f:
+        with open(f'{STORE_BASE_PATH}/' + project_id + '/project_info.json', 'r') as f:
             project_info = json.load(f)
             scenario_id = project_info['scenario_id']
 
@@ -115,7 +115,7 @@ def returnRandomTuples(sample_size, project_id, resample=False):
 
     else:
         unserved_indices = pickle.load(
-            open('./store/' + project_id + '/unserved_indices.pk', 'rb'))
+            open(f'{STORE_BASE_PATH}/' + project_id + '/unserved_indices.pk', 'rb'))
         s_out = random.sample(list(unserved_indices), min(
             len(unserved_indices), sample_size))
 
@@ -127,10 +127,10 @@ def returnActiveLearningTuples(sample_size, project_id,
                                resample=False):
     '''Read current fd metadata of the project'''
     fd_metadata = pickle.load(
-        open('./store/' + project_id + '/fd_metadata.pk', 'rb'))
+        open(f'{STORE_BASE_PATH}/' + project_id + '/fd_metadata.pk', 'rb'))
 
     unserved_indices = pickle.load(
-        open('./store/' + project_id + '/unserved_indices.pk', 'rb'))
+        open(f'{STORE_BASE_PATH}/' + project_id + '/unserved_indices.pk', 'rb'))
 
     '''Subsample candiate unserved indices'''
     if not resample:
@@ -145,7 +145,7 @@ def returnActiveLearningTuples(sample_size, project_id,
     else:
         candidate_unserved_indices = set(processed_dfs[scenario_id].index)
 
-    with open('./store/' + project_id + '/project_info.json', 'r') as f:
+    with open(f'{STORE_BASE_PATH}/' + project_id + '/project_info.json', 'r') as f:
         project_info = json.load(f)
         scenario_id = project_info['scenario_id']
 
@@ -206,10 +206,10 @@ def returnStochasticActiveLRTuples(sample_size, project_id,
                                    resample=False):
     '''Read current fd metadata of the project'''
     fd_metadata = pickle.load(
-        open('./store/' + project_id + '/fd_metadata.pk', 'rb'))
+        open(f'{STORE_BASE_PATH}/' + project_id + '/fd_metadata.pk', 'rb'))
 
     unserved_indices = pickle.load(
-        open('./store/' + project_id + '/unserved_indices.pk', 'rb'))
+        open(f'{STORE_BASE_PATH}/' + project_id + '/unserved_indices.pk', 'rb'))
 
     '''Subsample candiate unserved indices'''
     if not resample:
@@ -224,7 +224,7 @@ def returnStochasticActiveLRTuples(sample_size, project_id,
     else:
         candidate_unserved_indices = set(processed_dfs[scenario_id].index)
 
-    with open('./store/' + project_id + '/project_info.json', 'r') as f:
+    with open(f'{STORE_BASE_PATH}/' + project_id + '/project_info.json', 'r') as f:
         project_info = json.load(f)
         scenario_id = project_info['scenario_id']
 

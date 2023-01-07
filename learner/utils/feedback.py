@@ -13,7 +13,7 @@ from .env_variables import TOTAL_ITERATIONS, RESAMPLE, SAMPLE_SIZE
 from .helper import buildSample, interpretFeedback, StudyMetric, recordFeedback
 from .initialize_variables import processed_dfs, validation_indices_dict
 from .metrics import compute_metrics_using_converged_trainer_model
-from .env_variables import MODEL_FDS_TOP_K
+from .env_variables import MODEL_FDS_TOP_K, STORE_BASE_PATH
 
 console = Console()
 logger = logging.getLogger(__file__)
@@ -48,14 +48,14 @@ class Feedback(Resource):
 
         # Get the current iteration count and current time
         current_iter = pickle.load(
-            open('./store/' + project_id + '/current_iter.pk', 'rb'))
+            open(f'{STORE_BASE_PATH}/' + project_id + '/current_iter.pk', 'rb'))
         logger.info(current_iter)
         current_time = time.time()
 
         logger.info('*** Iteration counter updated ***')
 
         # Get the project info
-        with open('./store/' + project_id + '/project_info.json', 'r') as f:
+        with open(f'{STORE_BASE_PATH}/' + project_id + '/project_info.json', 'r') as f:
             project_info = json.load(f)
             sampling_method = project_info['sampling_method']
         scenario_id = project_info['scenario_id']
@@ -85,31 +85,31 @@ class Feedback(Resource):
 
         # open file containing the indices of unserved tuples, update it and dump
         unserved_indices = pickle.load(
-            open('./store/' + project_id + '/unserved_indices.pk', 'rb'))
+            open(f'{STORE_BASE_PATH}/' + project_id + '/unserved_indices.pk', 'rb'))
         unserved_indices = (set(unserved_indices) - set(s_index))
         pickle.dump(unserved_indices,
-                    open('./store/' + project_id + '/unserved_indices.pk',
+                    open(f'{STORE_BASE_PATH}/' + project_id + '/unserved_indices.pk',
                          'wb'))
 
         pickle.dump(s_index,
-                    open('./store/' + project_id + '/current_sample.pk', 'wb'))
+                    open(f'{STORE_BASE_PATH}/' + project_id + '/current_sample.pk', 'wb'))
 
         s_out.insert(0, 'id', s_out.index, True)
         logger.info(s_out.index)
 
         # Build feedback map for front-end
         start_time = pickle.load(
-            open('./store/' + project_id + '/start_time.pk', 'rb'))
+            open(f'{STORE_BASE_PATH}/' + project_id + '/start_time.pk', 'rb'))
         elapsed_time = current_time - start_time
         feedback = list()
         interaction_metadata = pickle.load(
-            open('./store/' + project_id + '/interaction_metadata.pk', 'rb'))
+            open(f'{STORE_BASE_PATH}/' + project_id + '/interaction_metadata.pk', 'rb'))
         interaction_metadata['user_hypothesis_history'].append(
             StudyMetric(iter_num=current_iter - 1,
                         value=[current_user_h, user_h_comment],
                         elapsed_time=elapsed_time))  # current iter - 1 because it's for the prev iter (i.e. before incrementing current_iter)
         pickle.dump(interaction_metadata,
-                    open('./store/' + project_id + '/interaction_metadata.pk',
+                    open(f'{STORE_BASE_PATH}/' + project_id + '/interaction_metadata.pk',
                          'wb'))
 
         for idx in s_out.index:
@@ -133,10 +133,10 @@ class Feedback(Resource):
             val_idxs = validation_indices_dict[scenario_id]
 
             study_metrics = json.load(
-                open('./store/' + project_id + '/study_metrics.json', 'r'))
+                open(f'{STORE_BASE_PATH}/' + project_id + '/study_metrics.json', 'r'))
 
             for i in range(current_iter):
-                with open(f'./store/{project_id}/iteration_fd_metadata/learner/model_{i}.pk', 'rb') as fp:
+                with open(f'{STORE_BASE_PATH}/{project_id}/iteration_fd_metadata/learner/model_{i}.pk', 'rb') as fp:
                     learner_model = pickle.load(fp)
                 accuracy, recall, precision, f1 = \
                     compute_metrics_using_converged_trainer_model(
@@ -152,15 +152,15 @@ class Feedback(Resource):
                 study_metrics['iter_precision_converged'].append(precision)
                 study_metrics['iter_f1_converged'].append(f1)
             json.dump(study_metrics,
-                      open('./store/' + project_id + '/study_metrics.json', 'w'))
+                      open(f'{STORE_BASE_PATH}/' + project_id + '/study_metrics.json', 'w'))
 
         else:
             msg = '[SUCCESS]: Saved feedback and built new sample.'
 
         # Save object updates
         pickle.dump(current_iter,
-                    open('./store/' + project_id + '/current_iter.pk', 'wb'))
-        with open('./store/' + project_id + '/project_info.json', 'w') as f:
+                    open(f'{STORE_BASE_PATH}/' + project_id + '/current_iter.pk', 'wb'))
+        with open(f'{STORE_BASE_PATH}/' + project_id + '/project_info.json', 'w') as f:
             json.dump(project_info, f)
 
         # Return information to the user

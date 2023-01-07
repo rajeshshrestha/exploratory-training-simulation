@@ -20,8 +20,8 @@ class Import(Resource):
 
     def post(self):
         # Initialize a new project
-        # projects = [('0x' + d) for d in os.listdir('./store') if
-        #             os.path.isdir(os.path.join('./store/', d))]
+        # projects = [('0x' + d) for d in os.listdir(f'{STORE_BASE_PATH}') if
+        #             os.path.isdir(os.path.join(f'{STORE_BASE_PATH}/', d))]
         # if len(projects) == 0:
         #     new_project_id = '{:08x}'.format(1)
         # else:
@@ -64,11 +64,11 @@ class Import(Resource):
         new_project_id = project_base_dir+"/" +\
             trainer_type + "_" + sampling_method + \
             "_"+str(random.randint(1, 1e15))
-        new_project_dir = './store/' + new_project_id
+        new_project_dir = f'{STORE_BASE_PATH}/' + new_project_id
 
         # Save the new project
         try:
-            os.makedirs(f'./store/{project_base_dir}',
+            os.makedirs(f'{STORE_BASE_PATH}/{project_base_dir}',
                         exist_ok=True)
             os.mkdir(new_project_dir)
             os.makedirs(f'{new_project_dir}/iteration_fd_metadata/trainer',
