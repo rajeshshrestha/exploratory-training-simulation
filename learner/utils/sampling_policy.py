@@ -15,6 +15,7 @@ from .env_variables import STOCHASTIC_BEST_RESPONSE_CANDIDATE_INDICES_NUM
 from .env_variables import STOCHASTIC_ACTIVE_LEARNING_CANDIDATE_INDICES_NUM
 from .env_variables import STOCHASTIC_BEST_RESPONSE_GAMMA
 from .env_variables import STOCHASTIC_UNCERTAINTY_SAMPLING_GAMMA
+from .env_variables import STORE_BASE_PATH
 
 # Return Samples using stochastic best response
 

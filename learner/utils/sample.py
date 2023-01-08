@@ -7,7 +7,7 @@ from flask import request
 from flask_restful import Resource
 from rich.console import Console
 
-from .env_variables import RESAMPLE, SAMPLE_SIZE
+from .env_variables import RESAMPLE, SAMPLE_SIZE, STORE_BASE_PATH
 from .helper import buildSample
 from .initialize_variables import processed_dfs
 

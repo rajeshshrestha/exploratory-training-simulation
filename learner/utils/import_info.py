@@ -9,6 +9,7 @@ from rich.console import Console
 from .initialize_variables import scenarios, processed_dfs, validation_indices_dict, models_dict
 from .helper import StudyMetric, FDMeta, initialPrior
 import random
+from .env_variables import STORE_BASE_PATH
 
 console = Console()
 logger = logging.getLogger(__file__)
@@ -75,9 +76,9 @@ class Import(Resource):
                         exist_ok=True)
             os.makedirs(f'{new_project_dir}/iteration_fd_metadata/learner',
                         exist_ok=True)
-        except OSError:
+        except OSError as e:
             returned_data = {
-                'msg': '[ERROR] Unable to create a directory for this project.'
+                'msg': f'[ERROR] Unable to create a directory for this project. \n {e}'
             }
             logger.info(returned_data)
             response = json.dumps(returned_data)

@@ -14,28 +14,29 @@ def initialize_learner(scenario_id,
     """
     Initialize the project and the user intital prior belief
     """
-    try:
-        response = requests.post(
-            "http://localhost:5000/duo/api/import",
-            data={
-                "scenario_id": scenario_id,
-                "email": "",
-                "initial_fd": "Not Sure",
-                "fd_comment": "",
-                "skip_user": True,
-                "violation_ratio": "close",
-                "sampling_method": sampling_method,
-                "trainer_type": trainer_type,
-                'use_val_data': use_val_data,
-                "trainer_prior_type": trainer_prior_type,
-                "learner_prior_type": learner_prior_type
-            },
-        ).json()
-        project_id = response["project_id"]
-        return project_id, response
-    except Exception as e:
-        logger.error(e)
-        raise Exception(e)
+    # try:
+    response = requests.post(
+        "http://localhost:5000/duo/api/import",
+        data={
+            "scenario_id": scenario_id,
+            "email": "",
+            "initial_fd": "Not Sure",
+            "fd_comment": "",
+            "skip_user": True,
+            "violation_ratio": "close",
+            "sampling_method": sampling_method,
+            "trainer_type": trainer_type,
+            'use_val_data': use_val_data,
+            "trainer_prior_type": trainer_prior_type,
+            "learner_prior_type": learner_prior_type
+        },
+    ).json()
+    print(response)
+    project_id = response["project_id"]
+    return project_id, response
+    # except Exception as e:
+    #     logger.error(e)
+    #     raise Exception(e)
 
 
 def get_initial_sample(project_id):
