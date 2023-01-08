@@ -30,8 +30,11 @@ def initialize_learner(scenario_id,
             "trainer_prior_type": trainer_prior_type,
             "learner_prior_type": learner_prior_type
         },
-    ).json()
-    project_id = response["project_id"]
+    )
+    if  response.status_code < 200 or response.status_code >=300:
+        logger.error(response.text)
+
+    project_id = response.json()["project_id"]
     return project_id, response
     # except Exception as e:
     #     logger.error(e)

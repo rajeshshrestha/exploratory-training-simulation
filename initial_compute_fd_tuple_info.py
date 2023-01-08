@@ -129,8 +129,9 @@ for hyp in tmp_hypothesis_space:
     relevant_cols |= (set(lhs) | set(rhs))
 
 raw_df = raw_df[list(relevant_cols)]
-if len(raw_df) > 3000:
-    raw_df = raw_df.sample(n=3000).reset_index(drop=True)
+if len(raw_df) > 2000:
+    raw_df = raw_df.sample(n=2000).reset_index(drop=True)
+    raw_df.to_csv(data_path)
 # %%
 cpu_num = os.cpu_count()
 
