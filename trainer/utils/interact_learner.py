@@ -31,7 +31,6 @@ def initialize_learner(scenario_id,
             "learner_prior_type": learner_prior_type
         },
     ).json()
-    print(response)
     project_id = response["project_id"]
     return project_id, response
     # except Exception as e:
