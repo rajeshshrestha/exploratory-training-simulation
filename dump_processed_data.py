@@ -26,6 +26,8 @@ parser.add_argument('--dataset', default='airport', type=str)
 args = parser.parse_args()
 print(args)
 
+os.makedirs("./data/processed-data", exist_ok=True)
+os.makedirs("./data/processed-exp-data", exist_ok=True)
 
 clean_max_num = args.max_clean_num
 dirty_sample_percentage = args.max_dirty_prop
@@ -303,7 +305,7 @@ with open('./new_scenarios.json', 'r') as f:
 '''Process new_scenarios to make the processing faster later'''
 processed_df = dict()
 filtered_processed_scenarios = dict()
-for dataset in models_dict:
+for dataset in [DATASET]:
     processed_df[dataset] = pd.read_csv(
         scenarios[dataset]['processed_dataset_path'], index_col=0)
     processed_df[dataset].index = processed_df[dataset].index.map(str)
