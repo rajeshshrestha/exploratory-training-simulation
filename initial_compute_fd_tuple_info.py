@@ -100,7 +100,7 @@ DATASET = args.dataset
 assert DATASET in ['airport', 'omdb', 'tax', 'hospital'], f"Invalid dataset: {DATASET} passed"
 
 # %%
-data_path = f"./data/raw-data/{DATASET}-clean-full.csv"
+data_path = f"./data/preprocessed-data/{DATASET}-clean-full.csv"
 
 raw_df = pd.read_csv(data_path)
 raw_df.rename(columns=dict((col, col.lower())
@@ -167,7 +167,7 @@ for hypothesis in new_scenarios_dict[DATASET]['hypothesis_space']:
 # %%
 new_scenarios_dict[DATASET][
     'processed_dataset_path'] = F"data/processed-data/{DATASET}-sampled.csv"
-new_scenarios_dict[DATASET]['raw_dataset_path'] = F"data/raw-data/{DATASET}-clean-full.csv"
+new_scenarios_dict[DATASET]['raw_dataset_path'] = F"data/preprocessed-data/{DATASET}-clean-full.csv"
 
 # %%
 if os.path.exists("./new_scenarios.json"):

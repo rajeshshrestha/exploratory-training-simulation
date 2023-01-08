@@ -39,7 +39,7 @@ assert DATASET in ['airport', 'omdb', 'tax', 'hospital'], f"Invalid dataset: {DA
 # ## Read raw data
 
 # %%
-data_path = f"./data/raw-data/{DATASET}-clean-full.csv"
+data_path = f"./data/preprocessed-data/{DATASET}-clean-full.csv"
 
 raw_df = pd.read_csv(data_path)
 raw_df.rename(columns=dict((col, col.lower())
