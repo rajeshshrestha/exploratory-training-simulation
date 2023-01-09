@@ -53,7 +53,7 @@ with open('scenarios.json', 'r') as fp:
     scenarios = json.load(fp)
 
 '''Add new hypothesis space info in scenarios'''
-scenarios[args.dataset_name] = fd_space
+scenarios[args.dataset_name] = {'hypothesis_space': fd_space}
 
 '''Dump the info'''
 with open('scenarios.json', 'w') as fp:
