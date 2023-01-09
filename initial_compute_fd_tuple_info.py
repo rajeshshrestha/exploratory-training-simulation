@@ -11,8 +11,9 @@ from tqdm import tqdm
 import argparse
 
 # %%
+FD_ATTRIBUTE_NUMS = [2,3,4]
 
-
+# %%
 def parse_hypothesis(fd):
     lfd, rfd = fd.split("=>")
 
@@ -123,7 +124,7 @@ hypothesis_space = []
 relevant_cols = set()
 for hyp in tmp_hypothesis_space:
     lhs, rhs = parse_hypothesis(hyp)
-    if len(lhs+rhs) not in [3, 4]:
+    if len(lhs+rhs) not in FD_ATTRIBUTE_NUMS:
         continue
     hypothesis_space.append(hyp)
     relevant_cols |= (set(lhs) | set(rhs))

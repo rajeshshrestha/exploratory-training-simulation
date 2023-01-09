@@ -16,6 +16,7 @@ import pickle as pk
 from tqdm import tqdm
 import argparse
 
+FD_ATTRIBUTE_NUMS = [2, 3, 4]
 # %%
 '''Parse arguments'''
 parser = argparse.ArgumentParser()
@@ -41,7 +42,7 @@ assert DATASET in ['airport', 'omdb', 'tax', 'hospital'], f"Invalid dataset: {DA
 # %%
 data_path = f"./data/preprocessed-data/{DATASET}-clean-full.csv"
 
-raw_df = pd.read_csv(data_path)
+raw_df = pd.read_csv(data_path, index_col=0)
 raw_df.rename(columns=dict((col, col.lower())
               for col in raw_df.columns), inplace=True)
 raw_df.index = raw_df.index.map(str)
@@ -63,7 +64,7 @@ with open("./new_scenarios.json", 'r') as fp:
 hypothesis_support_violation_ratio_info = dict()
 for hypothesis in new_scenarios_dict[DATASET]['hypothesis_space']:
     hypothesis_info_dict = new_scenarios_dict[DATASET]['hypothesis_space'][hypothesis]
-    if len(hypothesis_info_dict['lfd']+hypothesis_info_dict['rfd']) not in [3, 4]:
+    if len(hypothesis_info_dict['lfd']+hypothesis_info_dict['rfd']) not in FD_ATTRIBUTE_NUMS:
         continue
 
     support_pairs_num, violation_pairs_num = 0, 0
@@ -98,9 +99,9 @@ def predict_clean_tuple(idx, model):
     for hypothesis, conf in model.items():
         '''Check the number of supports and violations based on the model'''
         support_pairs_num = len(
-            new_scenarios_dict[DATASET]['hypothesis_space'][hypothesis]['supports'].get(idx, []))
+            new_scenarios_dict[DATASET]['hypothesis_space'][hypothesis]['supports'][idx])
         violation_pairs_num = len(
-            new_scenarios_dict[DATASET]['hypothesis_space'][hypothesis]['violations'].get(idx, []))
+            new_scenarios_dict[DATASET]['hypothesis_space'][hypothesis]['violations'][idx])
 
         '''Vote according to the hypothesis conf'''
         total_score += (conf*(support_pairs_num-violation_pairs_num))
@@ -139,14 +140,14 @@ with open("./trainer_model.json", 'w') as fp:
 def get_conditional_clean_prob(idx, fd, model_probab, valid_indices=None):
     if valid_indices is None:
         compliance_num = len(
-            new_scenarios_dict[DATASET]['hypothesis_space'][fd]['supports'].get(str(idx), []))
+            new_scenarios_dict[DATASET]['hypothesis_space'][fd]['supports'][str(idx)])
         violation_num = len(
-            new_scenarios_dict[DATASET]['hypothesis_space'][fd]['violations'].get(str(idx), []))
+            new_scenarios_dict[DATASET]['hypothesis_space'][fd]['violations'][str(idx)])
     else:
         compliance_num = len([idx_ for idx_ in new_scenarios_dict[DATASET]['hypothesis_space']
-                             [fd]['supports'].get(str(idx), []) if idx_ in valid_indices])
+                             [fd]['supports'][str(idx)] if idx_ in valid_indices])
         violation_num = len([idx_ for idx_ in new_scenarios_dict[DATASET]['hypothesis_space']
-                            [fd]['violations'].get(str(idx), []) if idx_ in valid_indices])
+                            [fd]['violations'][str(idx)] if idx_ in valid_indices])
 
     tuple_clean_score = math.exp(model_probab*(compliance_num-violation_num))
     tuple_dirty_score = math.exp(model_probab*(-compliance_num+violation_num))
@@ -185,7 +186,7 @@ else:
 clean_sample_idxs = np.random.choice(list(clean_indices), min(
     len(clean_indices), clean_max_num), replace=False)
 dirty_sample_idxs = np.random.choice(list(dirty_indices), int(
-    dirty_sample_percentage*len(clean_sample_idxs)), replace=False)
+    min(len(dirty_indices), dirty_sample_percentage*len(clean_sample_idxs))), replace=False)
 sampled_data_indices = set(clean_sample_idxs).union(set(dirty_sample_idxs))
 print(len(sampled_data_indices))
 
@@ -237,7 +238,7 @@ while model_mae > 1e-05:
     model_mae = 0
     for hypothesis in new_scenarios_dict[DATASET]['hypothesis_space']:
         hypothesis_info_dict = new_scenarios_dict[DATASET]['hypothesis_space'][hypothesis]
-        if len(hypothesis_info_dict['lfd']+hypothesis_info_dict['rfd']) not in [3, 4]:
+        if len(hypothesis_info_dict['lfd']+hypothesis_info_dict['rfd']) not in FD_ATTRIBUTE_NUMS:
             continue
 
         '''Only consider the clean estimated indices'''
@@ -370,15 +371,15 @@ with open("./data/processed-exp-data/processed_dfs.pk", 'rb') as fp:
 def compute_conditional_clean_prob(idx, fd, fd_prob, scenario_id, data_indices=None):
     if data_indices is None:
         compliance_num = len(
-            _filtered_processed_scenarios[scenario_id]['hypothesis_space'][fd]['supports'].get(idx, []))
+            _filtered_processed_scenarios[scenario_id]['hypothesis_space'][fd]['supports'][idx])
         violation_num = len(
-            _filtered_processed_scenarios[scenario_id]['hypothesis_space'][fd]['violations'].get(idx, []))
+            _filtered_processed_scenarios[scenario_id]['hypothesis_space'][fd]['violations'][idx])
     else:
         compliance_num = len([idx_ for idx_ in _filtered_processed_scenarios[scenario_id]['hypothesis_space']
-                              [fd]['supports'].get(idx, [])
+                              [fd]['supports'][idx]
                               if idx_ in data_indices])
         violation_num = len([idx_ for idx_ in _filtered_processed_scenarios[scenario_id]['hypothesis_space']
-                            [fd]['violations'].get(idx, []) if idx_ in data_indices])
+                            [fd]['violations'][idx] if idx_ in data_indices])
 
     tuple_clean_score = math.exp(fd_prob*(compliance_num-violation_num))
     tuple_dirty_score = math.exp(fd_prob*(-compliance_num+violation_num))
