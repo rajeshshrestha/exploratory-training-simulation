@@ -263,10 +263,11 @@ if __name__ == "__main__":
     base_project_dir = os.path.dirname(
         os.path.abspath(__file__))
     base_run_dir = os.path.join(base_project_dir, 'learner', 'store')
+    # base_run_dir = "/data/shresthr/store_with_duplicates_noisy_addition"
     fig_save_base_dir = os.path.join(base_project_dir, 'figures')
     os.makedirs(fig_save_base_dir, exist_ok=True)
 
-    for dataset in ['airport', 'omdb']:
+    for dataset in ['airport', 'omdb', 'hospital', 'tax']:
         for use_val_data in ['True', 'False']:
             dir1 = os.path.join(
                 base_run_dir, f"dataset={dataset}", f"use_val_data={use_val_data}")

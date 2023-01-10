@@ -69,8 +69,11 @@ data.to_csv(
     f"./data/preprocessed-data/{args.dataset_name}-clean-full.csv", index=False)
 
 '''Load scenarios file'''
-with open('scenarios.json', 'r') as fp:
-    scenarios = json.load(fp)
+if os.path.isfile('scenarios.json'):
+    with open('scenarios.json', 'r') as fp:
+        scenarios = json.load(fp)
+else:
+    scenarios = dict()
 
 '''Add new hypothesis space info in scenarios'''
 scenarios[args.dataset_name] = {'hypothesis_space': fd_space}
