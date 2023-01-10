@@ -16,7 +16,7 @@ import pickle as pk
 from tqdm import tqdm
 import argparse
 
-FD_ATTRIBUTE_NUMS = [2, 3, 4]
+FD_ATTRIBUTE_NUMS = [2, 3]
 # %%
 '''Parse arguments'''
 parser = argparse.ArgumentParser()

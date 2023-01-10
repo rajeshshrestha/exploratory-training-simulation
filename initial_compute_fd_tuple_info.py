@@ -11,7 +11,7 @@ from tqdm import tqdm
 import argparse
 
 # %%
-FD_ATTRIBUTE_NUMS = [2,3,4]
+FD_ATTRIBUTE_NUMS = [2,3]
 
 # %%
 def parse_hypothesis(fd):
@@ -128,6 +128,8 @@ for hyp in tmp_hypothesis_space:
         continue
     hypothesis_space.append(hyp)
     relevant_cols |= (set(lhs) | set(rhs))
+
+print(f"Number of hypothesis: {len(hypothesis_space)}")
 
 raw_df = raw_df[list(relevant_cols)]
 if len(raw_df) > 2000:
