@@ -48,7 +48,7 @@ class BayesianTrainer:
                  project_id,
                  prior_type, columns,
                  p_max, top_k,
-                prior_variance=0.025) -> None:
+                prior_variance=0.0025) -> None:
 
         self.scenario_id = scenario_id
         self.project_id = project_id
