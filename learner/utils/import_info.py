@@ -9,7 +9,7 @@ from rich.console import Console
 from .initialize_variables import scenarios, processed_dfs, validation_indices_dict, models_dict
 from .helper import StudyMetric, FDMeta, initialPrior
 import random
-from .env_variables import STORE_BASE_PATH
+from .env_variables import STORE_BASE_PATH, LEARNER_PRIOR_VARIANCE
 
 console = Console()
 logger = logging.getLogger(__file__)
@@ -221,7 +221,7 @@ def get_initial_fd_metadata(scenario_id, prior_type):
     # Initialize hypothesis parameters
     fd_metadata = dict()
 
-    variance = 0.0025  # hyperparameter
+    variance = LEARNER_PRIOR_VARIANCE # hyperparameter
     logger.info(f"Initializing learner prior model with variance: {variance}")
     if prior_type in ['uniform-0.1',
                       'uniform-0.5',

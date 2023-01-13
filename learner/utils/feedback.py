@@ -12,7 +12,7 @@ from copy import deepcopy
 from .env_variables import TOTAL_ITERATIONS, RESAMPLE, SAMPLE_SIZE
 from .helper import buildSample, interpretFeedback, StudyMetric, recordFeedback
 from .initialize_variables import processed_dfs, validation_indices_dict
-from .metrics import compute_metrics_using_converged_trainer_model
+from .metrics import compute_soft_metrics_using_converged_trainer_model
 from .env_variables import MODEL_FDS_TOP_K, STORE_BASE_PATH
 
 console = Console()
@@ -134,17 +134,19 @@ class Feedback(Resource):
 
             study_metrics = json.load(
                 open(f'{STORE_BASE_PATH}/' + project_id + '/study_metrics.json', 'r'))
+            with open(f'../converged_models/converged_global_{scenario_id}.json', 'r') as fp:
+                converged_global_model = json.load(fp)
 
             for i in range(current_iter):
                 with open(f'{STORE_BASE_PATH}/{project_id}/iteration_fd_metadata/learner/model_{i}.pk', 'rb') as fp:
                     learner_model = pickle.load(fp)
                 accuracy, recall, precision, f1 = \
-                    compute_metrics_using_converged_trainer_model(
+                    compute_soft_metrics_using_converged_trainer_model(
                         indices=val_idxs,
                         model=deepcopy(
                             learner_model),
                         converged_trainer_model=deepcopy(
-                            trainer_model),
+                            converged_global_model),
                         scenario_id=scenario_id,
                         top_k=MODEL_FDS_TOP_K)
                 study_metrics['iter_accuracy_converged'].append(accuracy)

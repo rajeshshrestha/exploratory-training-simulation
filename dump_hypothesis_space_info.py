@@ -66,7 +66,7 @@ if args.noise_ratio and args.noise_ratio > 0:
     data = pd.concat([data, noisy_df], ignore_index=True)
 
 data.to_csv(
-    f"./data/preprocessed-data/{args.dataset_name}-clean-full.csv", index=False)
+    f"./data/preprocessed-data/{args.dataset_name}-clean-full.csv")
 
 '''Load scenarios file'''
 if os.path.isfile('scenarios.json'):

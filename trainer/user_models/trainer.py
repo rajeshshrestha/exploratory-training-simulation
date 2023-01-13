@@ -2,6 +2,7 @@ from .full_oracle import FullOracleTrainer
 from .bayesian import BayesianTrainer
 from .learning_oracle import LearningOracleTrainer
 import re
+from .env_variables import TRAINER_PRIOR_VARIANCE
 
 
 class TrainerModel:
@@ -40,7 +41,8 @@ class TrainerModel:
                                          columns=columns,
                                          prior_type=trainer_prior_type,
                                          p_max=0.9,
-                                         top_k=10)
+                                         top_k=10,
+                                         prior_variance=TRAINER_PRIOR_VARIANCE)
 
         '''Save columns on the data except the id column'''
         self.columns = columns

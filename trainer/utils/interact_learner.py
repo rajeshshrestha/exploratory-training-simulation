@@ -1,6 +1,9 @@
 import requests
 import json
 import logging
+import os
+
+PORT = int(os.getenv("PORT", 5000))
 
 logger = logging.getLogger(__file__)
 
@@ -16,7 +19,7 @@ def initialize_learner(scenario_id,
     """
     # try:
     response = requests.post(
-        "http://localhost:5000/duo/api/import",
+        f"http://localhost:{PORT}/duo/api/import",
         data={
             "scenario_id": scenario_id,
             "email": "",
@@ -44,7 +47,7 @@ def initialize_learner(scenario_id,
 def get_initial_sample(project_id):
     # Get first sample
     try:
-        response = requests.post('http://localhost:5000/duo/api/sample',
+        response = requests.post(f'http://localhost:{PORT}/duo/api/sample',
                                  data={'project_id': project_id}).json()
 
         sample = response['sample']
@@ -85,7 +88,7 @@ def send_feedback(project_id, feedback_dict, model_dict):
     }
 
     try:
-        response = requests.post('http://localhost:5000/duo/api/feedback',
+        response = requests.post(f'http://localhost:{PORT}/duo/api/feedback',
                                  data=formData).json()
         msg = response['msg']
         if msg != '[DONE]':  # Server says do another iteration

@@ -75,6 +75,32 @@ def compute_metrics(indices, model, scenario_id, top_k):
 
     return accuracy, recall, precision, f1
 
+def compute_soft_metrics(indices, model, scenario_id, top_k):
+    '''Pick top k fds if needed'''
+    if 0 < top_k < len(model):
+        model = dict(sorted(model.items(), key=itemgetter(1),
+                     reverse=True)[:top_k])
+
+    conditional_clean_probability_dict = get_average_cond_clean_prediction(
+        indices=indices, model=model, scenario_id=scenario_id)
+    logger.info(conditional_clean_probability_dict)
+
+    idxs = list(conditional_clean_probability_dict.keys())
+    is_dirty_true_labels = [not models_dict[scenario_id]["predictions"][idx]
+                            for idx in idxs]
+
+    is_correct_wt = [(1-conditional_clean_probability_dict[idx]) if is_true_dirty else conditional_clean_probability_dict[idx] for idx, is_true_dirty
+                  in zip(idxs, is_dirty_true_labels)]
+    true_positive_wt = [(1-conditional_clean_probability_dict[idx]) for idx, is_true_dirty
+                  in zip(idxs, is_dirty_true_labels) if is_true_dirty]
+    is_dirty_predicted_wt = [(1-conditional_clean_probability_dict[idx]) for idx in idxs]
+
+    accuracy = np.mean(is_correct_wt)
+    recall = sum(true_positive_wt)/(sum(is_dirty_true_labels)+1e-7)
+    precision = sum(true_positive_wt)/(sum(is_dirty_predicted_wt)+1e-7)
+    f1 = 2*recall*precision/(recall+precision+1e-7)
+
+    return accuracy, recall, precision, f1
 
 def compute_metrics_using_converged_trainer_model(indices, model,
                                                   converged_trainer_model,
@@ -108,6 +134,42 @@ def compute_metrics_using_converged_trainer_model(indices, model,
     accuracy = np.mean(is_correct)
     recall = sum(true_positive)/(sum(is_dirty_true_labels)+1e-7)
     precision = sum(true_positive)/(sum(is_dirty_predicted_labels)+1e-7)
+    f1 = 2*recall*precision/(recall+precision+1e-7)
+
+    return accuracy, recall, precision, f1
+
+def compute_soft_metrics_using_converged_trainer_model(indices, model,
+                                                  converged_trainer_model,
+                                                  scenario_id,
+                                                  top_k):
+    '''Pick top k fds if needed'''
+    if 0 < top_k < len(model):
+        model = dict(sorted(model.items(), key=itemgetter(1),
+                     reverse=True)[:top_k])
+        converged_trainer_model = dict(sorted(converged_trainer_model.items(),
+                                              key=itemgetter(1), reverse=True)[:top_k])
+
+    conditional_clean_probability_dict = get_average_cond_clean_prediction(
+        indices=indices, model=model, scenario_id=scenario_id)
+    ground_conditional_clean_probability_dict = \
+        get_average_cond_clean_prediction(indices=indices,
+                                          model=converged_trainer_model,
+                                          scenario_id=scenario_id)
+    logger.info(conditional_clean_probability_dict)
+
+    idxs = list(conditional_clean_probability_dict.keys())
+    is_dirty_true_labels = [
+        ground_conditional_clean_probability_dict[idx] < 0.5 for idx in idxs]
+        
+    is_correct_wt = [(1-conditional_clean_probability_dict[idx]) if is_true_dirty else conditional_clean_probability_dict[idx] for idx, is_true_dirty
+                  in zip(idxs, is_dirty_true_labels)]
+    true_positive_wt = [(1-conditional_clean_probability_dict[idx]) for idx, is_true_dirty
+                  in zip(idxs, is_dirty_true_labels) if is_true_dirty]
+    is_dirty_predicted_wt = [(1-conditional_clean_probability_dict[idx]) for idx in idxs]
+
+    accuracy = np.mean(is_correct_wt)
+    recall = sum(true_positive_wt)/(sum(is_dirty_true_labels)+1e-7)
+    precision = sum(true_positive_wt)/(sum(is_dirty_predicted_wt)+1e-7)
     f1 = 2*recall*precision/(recall+precision+1e-7)
 
     return accuracy, recall, precision, f1

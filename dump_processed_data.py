@@ -16,7 +16,6 @@ import pickle as pk
 from tqdm import tqdm
 import argparse
 
-FD_ATTRIBUTE_NUMS = [2, 3]
 # %%
 '''Parse arguments'''
 parser = argparse.ArgumentParser()
@@ -36,6 +35,10 @@ dirty_sample_percentage = args.max_dirty_prop
 DATASET = args.dataset
 assert DATASET in ['airport', 'omdb', 'tax', 'hospital'], f"Invalid dataset: {DATASET} passed"
 
+if DATASET in ['omdb']:
+    FD_ATTRIBUTE_NUMS = [2, 3]
+elif DATASET in ['tax', 'airport', 'hospital']:
+    FD_ATTRIBUTE_NUMS = [2,3]
 # %% [markdown]
 # ## Read raw data
 

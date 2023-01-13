@@ -8,7 +8,7 @@ import json
 import os
 from statistics import mean
 import numpy as np
-
+import shutil
 # %%
 
 
@@ -173,38 +173,41 @@ def compute_average_metrics(results_dict):
 
 
 def print_metrics(run_folder_path, print_intervals=[0, 0.1, 0.5, 0.9, 1.0]):
-    '''Read run folder'''
-    results_dict = read_metrics(run_folder_path=run_folder_path)
+    try:
+        '''Read run folder'''
+        results_dict = read_metrics(run_folder_path=run_folder_path)
 
-    '''Compute average dict'''
-    average_dict = compute_average_metrics(results_dict=results_dict)
+        '''Compute average dict'''
+        average_dict = compute_average_metrics(results_dict=results_dict)
 
-    prior_type = run_folder_path.split("/")[-1]
-    print("*****************************************************************************")
-    print(f"Prior Type: {prior_type}")
-    print("*****************************************************************************")
+        prior_type = run_folder_path.split("/")[-1]
+        print("*****************************************************************************")
+        print(f"Prior Type: {prior_type}")
+        print("*****************************************************************************")
 
-    for trainer_type in ['bayesian']:
-        for metric in ['accuracy_converged',
-                       'recall_converged',
-                       'precision_converged',
-                       'f1_converged']:
-            print(
-                f"Trainer Type: {trainer_type} Metric: {metric}")
-            for interval in print_intervals:
-                print_str = "Iteration Fraction: %.2f "%round(interval,2)
-                for sampling_method in average_dict[trainer_type]:
-                    total_iter = len(
-                        average_dict[trainer_type][sampling_method][f'iter_{metric}'][0])-1
-                    
-                    if total_iter < 0:
-                        continue
-                    
-                    iter = int(total_iter*interval)
-                    print_str += f"{sampling_method}: %.2f "%round(average_dict[trainer_type][sampling_method][f'iter_{metric}'][2][iter], 3)
-                print(print_str)
-            print("-------------------------------------------------------------------")
-    print("========================================================================")
+        for trainer_type in ['bayesian']:
+            for metric in ['accuracy_converged',
+                        'recall_converged',
+                        'precision_converged',
+                        'f1_converged']:
+                print(
+                    f"Trainer Type: {trainer_type} Metric: {metric}")
+                for interval in print_intervals:
+                    print_str = "Iteration Fraction: %.2f "%round(interval,2)
+                    for sampling_method in average_dict[trainer_type]:
+                        total_iter = len(
+                            average_dict[trainer_type][sampling_method][f'iter_{metric}'][0])-1
+                        
+                        if total_iter < 0:
+                            continue
+                        
+                        iter = int(total_iter*interval)
+                        print_str += f"{sampling_method}: %.2f "%round(average_dict[trainer_type][sampling_method][f'iter_{metric}'][2][iter], 3)
+                    print(print_str)
+                print("-------------------------------------------------------------------")
+        print("========================================================================")
+    except Exception as e:
+        print(e)
 
 
 def plot_figures(run_folder_path):
@@ -260,14 +263,33 @@ def plot_figures(run_folder_path):
 
 # %%
 if __name__ == "__main__":
+    project_name = os.getenv("PROJECT_NAME", None)
     base_project_dir = os.path.dirname(
         os.path.abspath(__file__))
-    base_run_dir = os.path.join(base_project_dir, 'learner', 'store')
-    # base_run_dir = "/data/shresthr/store_with_duplicates_noisy_addition"
-    fig_save_base_dir = os.path.join(base_project_dir, 'figures')
+    if project_name is None:
+        base_run_dir = os.path.join(base_project_dir, 'learner', 'store')
+        fig_save_base_dir = os.path.join(base_project_dir, 'figures')
+
+    else:
+        base_run_dir = os.path.join("/data/shresthr", project_name, "store")
+        fig_save_base_dir = os.path.join("/data/shresthr", project_name, "figures")
+        data_save_base_dir = os.path.join("/data/shresthr", project_name, "data")
+
+        '''Create data directory'''
+        if os.path.exists(data_save_base_dir):
+            shutil.rmtree(data_save_base_dir)
+        os.makedirs(data_save_base_dir)
+
+        '''Copy new_scenarios, trainer_model and preprocessed files'''
+        shutil.copyfile("./scenarios.json", os.path.join("/data/shresthr", project_name,"data/scenarios.json"))
+        shutil.copyfile("./new_scenarios.json", os.path.join("/data/shresthr", project_name,"data/new_scenarios.json"))
+        shutil.copyfile("./trainer_model.json", os.path.join("/data/shresthr", project_name,"data/trainer_model.json"))
+        shutil.copytree("./data/preprocessed-data", os.path.join("/data/shresthr", project_name,"data/preprocessed-data"))
+    
     os.makedirs(fig_save_base_dir, exist_ok=True)
 
     for dataset in ['airport', 'omdb', 'hospital', 'tax']:
+        print(dataset)
         for use_val_data in ['True', 'False']:
             dir1 = os.path.join(
                 base_run_dir, f"dataset={dataset}", f"use_val_data={use_val_data}")

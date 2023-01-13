@@ -7,6 +7,7 @@ from rich.console import Console
 from utils.import_info import Import
 from utils.feedback import Feedback
 from utils.sample import Sample
+import os
 
 console = Console()
 
@@ -41,4 +42,4 @@ api.add_resource(Sample,
 if __name__ == '__main__':
     app.run(debug=False,
             host='0.0.0.0',
-            port=5000)
+            port=int(os.getenv("PORT", 5000)))

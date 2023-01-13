@@ -11,7 +11,6 @@ from tqdm import tqdm
 import argparse
 
 # %%
-FD_ATTRIBUTE_NUMS = [2,3]
 
 # %%
 def parse_hypothesis(fd):
@@ -100,10 +99,14 @@ print(args)
 DATASET = args.dataset
 assert DATASET in ['airport', 'omdb', 'tax', 'hospital'], f"Invalid dataset: {DATASET} passed"
 
+if DATASET in ['omdb']:
+    FD_ATTRIBUTE_NUMS = [2,3]
+elif DATASET in ['tax', 'hospital', 'airport']:
+    FD_ATTRIBUTE_NUMS = [2,3]
 # %%
 data_path = f"./data/preprocessed-data/{DATASET}-clean-full.csv"
 
-raw_df = pd.read_csv(data_path)
+raw_df = pd.read_csv(data_path, index_col=0)
 raw_df.rename(columns=dict((col, col.lower())
               for col in raw_df.columns), inplace=True)
 raw_df.index = raw_df.index.map(str)
@@ -134,7 +137,7 @@ print(f"Number of hypothesis: {len(hypothesis_space)}")
 raw_df = raw_df[list(relevant_cols)]
 if len(raw_df) > 2000:
     raw_df = raw_df.sample(n=2000).reset_index(drop=True)
-    raw_df.to_csv(data_path)
+raw_df.to_csv(data_path)
 # %%
 cpu_num = os.cpu_count()
 

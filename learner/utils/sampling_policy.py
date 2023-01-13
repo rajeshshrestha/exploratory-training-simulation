@@ -110,7 +110,7 @@ def returnRandomTuples(sample_size, project_id, resample=False):
             scenario_id = project_info['scenario_id']
 
         '''Read current fd metadata of the project'''
-        data_indices = processed_dfs[scenario_id].indices
+        data_indices = processed_dfs[scenario_id].index
         s_out = random.sample(list(data_indices), min(
             len(data_indices), sample_size))
 

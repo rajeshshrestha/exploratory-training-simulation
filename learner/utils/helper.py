@@ -6,7 +6,7 @@ from copy import deepcopy
 from .initialize_variables import scenarios
 from .initialize_variables import models_dict
 from .initialize_variables import validation_indices_dict
-from .metrics import compute_metrics
+from .metrics import compute_soft_metrics
 from .sampling_policy import returnRandomTuples, returnActiveLearningTuples
 from .sampling_policy import returnStochasticBRTuples
 from .sampling_policy import returnStochasticActiveLRTuples
@@ -240,7 +240,7 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
     '''Compute accuracy in Unserved dataset'''
     model_dict = dict((fd, fd_m.conf)for fd, fd_m in fd_metadata.items())
     val_idxs = validation_indices_dict[scenario_id]
-    accuracy, recall, precision, f1 = compute_metrics(
+    accuracy, recall, precision, f1 = compute_soft_metrics(
         indices=val_idxs,
         model=deepcopy(model_dict),
         scenario_id=scenario_id,

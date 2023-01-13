@@ -50,6 +50,8 @@ def run(scenario_id,
                                             feedback_dict=feedback_dict,
                                             model_dict=model_dict)
 
+    return model_dict
+
 
 if __name__ == '__main__':
     '''
@@ -69,8 +71,8 @@ if __name__ == '__main__':
     sampling_method = sys.argv[3]
     num_runs = int(sys.argv[4])  # How many runs of this simulation to do
     use_val_data = (sys.argv[5].lower() == 'true')
-    trainer_prior_type = sys.argv[6].lower()
-    learner_prior_type = sys.argv[7].lower()
+    # trainer_prior_type = sys.argv[6].lower()
+    # learner_prior_type = sys.argv[7].lower()
 
     if len(sys.argv) > 8:
         run_parallel = (sys.argv[8].lower() == 'true')
@@ -81,40 +83,57 @@ if __name__ == '__main__':
                             'learning-oracle',
                             'bayesian'],\
         "Invalid trainer type passed!!!"
-    assert sampling_method in ['RANDOM',
-                               'ACTIVELR',
-                               'STOCHASTICBR',
-                               'STOCHASTICUS'],\
-        "Invalid sampling method passed!!!"
+    # assert sampling_method in ['RANDOM',
+    #                            'ACTIVELR',
+    #                            'STOCHASTICBR',
+    #                            'STOCHASTICUS'],\
+    #     "Invalid sampling method passed!!!"
 
-    assert trainer_prior_type in ['uniform-0.1',
-                                  'uniform-0.5',
-                                  'uniform-0.9',
-                                  'data-estimate',
-                                  'random'
-                                  ], "Invalid Trainer Prior type used!!!"
-    assert learner_prior_type in ['uniform-0.1',
-                                  'uniform-0.5',
-                                  'uniform-0.9',
-                                  'data-estimate',
-                                  'random'
-                                  ], "Invalid Learner Prior type used!!!"
+    # assert trainer_prior_type in ['uniform-0.1',
+    #                               'uniform-0.5',
+    #                               'uniform-0.9',
+    #                               'data-estimate',
+    #                               'random'
+    #                               ], "Invalid Trainer Prior type used!!!"
+    # assert learner_prior_type in ['uniform-0.1',
+    #                               'uniform-0.5',
+    #                               'uniform-0.9',
+    #                               'data-estimate',
+    #                               'random'
+    #                               ], "Invalid Learner Prior type used!!!"
 
-    if not run_parallel:
-        for i in range(num_runs):
-            run(scenario_id=scenario_id,
-                trainer_type=trainer_type,
-                sampling_method=sampling_method,
-                use_val_data=use_val_data,
-                trainer_prior_type=trainer_prior_type,
-                learner_prior_type=learner_prior_type)
-    else:
-        cpu_num = os.cpu_count()
-        with Pool(cpu_num-1) as p:
-            p.map(partial(run,
-                          trainer_type=trainer_type,
-                          sampling_method=sampling_method,
-                          use_val_data=use_val_data,
-                          trainer_prior_type=trainer_prior_type,
-                          learner_prior_type=learner_prior_type),
-                  [scenario_id for i in range(num_runs)])
+    for learner_prior_type in ['uniform-0.1',
+                                    #   'uniform-0.5',
+                                    'uniform-0.9',
+                                    'data-estimate',
+                                    'random'
+                                    ]:
+        for trainer_prior_type in ['uniform-0.1',
+                                    #   'uniform-0.5',
+                                    'uniform-0.9',
+                                    'data-estimate',
+                                    'random'
+                                    ]:
+            for sampling_method in ['RANDOM',
+                                'ACTIVELR',
+                                'STOCHASTICBR',
+                                'STOCHASTICUS']:
+                print(learner_prior_type, trainer_prior_type, sampling_method)
+                if not run_parallel:
+                    for i in range(num_runs):
+                        run(scenario_id=scenario_id,
+                            trainer_type=trainer_type,
+                            sampling_method=sampling_method,
+                            use_val_data=use_val_data,
+                            trainer_prior_type=trainer_prior_type,
+                            learner_prior_type=learner_prior_type)
+                else:
+                    cpu_num = os.cpu_count()
+                    with Pool(min(cpu_num-1, num_runs)) as p:
+                        p.map(partial(run,
+                                    trainer_type=trainer_type,
+                                    sampling_method=sampling_method,
+                                    use_val_data=use_val_data,
+                                    trainer_prior_type=trainer_prior_type,
+                                    learner_prior_type=learner_prior_type),
+                            [scenario_id for i in range(num_runs)])
