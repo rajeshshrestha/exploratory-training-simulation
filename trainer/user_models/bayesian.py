@@ -178,10 +178,10 @@ class BayesianTrainer:
 
         data_idxs = set(data.keys())
 
-        # '''Predict dirtiness with current model'''
-        # is_dirty_predicted_dict = self.get_predictions(indices=data.keys())
-        # marked_rows = set(
-        #     idx for idx, is_dirty in is_dirty_predicted_dict.items() if is_dirty)
+        '''Predict dirtiness with current model'''
+        is_dirty_predicted_dict = self.get_predictions(indices=data.keys())
+        marked_rows = set(
+            idx for idx, is_dirty in is_dirty_predicted_dict.items() if is_dirty)
 
         for fd, fd_m in self.fd_metadata.items():
             # # Calculate which pairs have been marked and remove them from calculation
@@ -194,8 +194,8 @@ class BayesianTrainer:
             #             removed_pairs.add((x_, y_))
 
             for i in data_idxs:
-                # if i in marked_rows:
-                #     continue
+                if i in marked_rows:
+                    continue
 
                 compliance_num = len([idx for idx in scenarios[self.scenario_id]['hypothesis_space'][fd]['supports'][i]
                                       if idx in data_idxs])
@@ -282,8 +282,8 @@ class BayesianTrainer:
         return is_dirty_predicted_dict
 
     def update_feedback_map(self, data):
-        self.update_model(data)
 
+        self.update_model(data)
         is_dirty_predicted_dict = self.get_predictions(indices=data.keys())
 
         logger.info(f"Previous feedback_dict: {self.feedbackMap}")
