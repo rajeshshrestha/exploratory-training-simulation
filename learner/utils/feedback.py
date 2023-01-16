@@ -2,6 +2,7 @@ import json
 import pickle
 import time
 import logging
+import os
 
 import pandas as pd
 from flask import request
@@ -12,7 +13,7 @@ from copy import deepcopy
 from .env_variables import TOTAL_ITERATIONS, RESAMPLE, SAMPLE_SIZE
 from .helper import buildSample, interpretFeedback, StudyMetric, recordFeedback
 from .initialize_variables import processed_dfs, validation_indices_dict
-from .metrics import compute_soft_metrics_using_converged_trainer_model
+from .metrics import compute_metrics_using_converged_model
 from .env_variables import MODEL_FDS_TOP_K, STORE_BASE_PATH
 
 console = Console()
@@ -134,27 +135,39 @@ class Feedback(Resource):
 
             study_metrics = json.load(
                 open(f'{STORE_BASE_PATH}/' + project_id + '/study_metrics.json', 'r'))
-            with open(f'../converged_models/converged_global_{scenario_id}.json', 'r') as fp:
-                converged_global_model = json.load(fp)
+            
 
-            for i in range(current_iter):
-                with open(f'{STORE_BASE_PATH}/{project_id}/iteration_fd_metadata/learner/model_{i}.pk', 'rb') as fp:
-                    learner_model = pickle.load(fp)
-                accuracy, recall, precision, f1 = \
-                    compute_soft_metrics_using_converged_trainer_model(
-                        indices=val_idxs,
-                        model=deepcopy(
-                            learner_model),
-                        converged_trainer_model=deepcopy(
-                            converged_global_model),
-                        scenario_id=scenario_id,
-                        top_k=MODEL_FDS_TOP_K)
-                study_metrics['iter_accuracy_converged'].append(accuracy)
-                study_metrics['iter_recall_converged'].append(recall)
-                study_metrics['iter_precision_converged'].append(precision)
-                study_metrics['iter_f1_converged'].append(f1)
-            json.dump(study_metrics,
-                      open(f'{STORE_BASE_PATH}/' + project_id + '/study_metrics.json', 'w'))
+            if project_info['is_global']:
+                with open(f'{STORE_BASE_PATH}/{project_id}/iteration_fd_metadata/learner/model_{current_iter-1}.pk', 'rb') as fp:
+                    converged_learner_model = pickle.load(fp)
+
+                os.makedirs("../converged_models", exist_ok=True)
+                with open(f"../converged_models/converged_global_learner_{scenario_id}.json", "w") as fp:
+                    json.dump(converged_learner_model, fp)
+            else:
+                # with open(f'../converged_models/converged_global_trainer_{scenario_id}.json', 'r') as fp:
+                #     converged_global_model = json.load(fp)
+                with open(f'../converged_models/converged_global_learner_{scenario_id}.json', 'r') as fp:
+                    converged_global_model = json.load(fp)
+
+                for i in range(current_iter):
+                    with open(f'{STORE_BASE_PATH}/{project_id}/iteration_fd_metadata/learner/model_{i}.pk', 'rb') as fp:
+                        learner_model = pickle.load(fp)
+                    accuracy, recall, precision, f1 = \
+                        compute_metrics_using_converged_model(
+                            indices=val_idxs,
+                            model=deepcopy(
+                                learner_model),
+                            converged_model=deepcopy(
+                                converged_global_model),
+                            scenario_id=scenario_id,
+                            top_k=MODEL_FDS_TOP_K)
+                    study_metrics['iter_accuracy_converged'].append(accuracy)
+                    study_metrics['iter_recall_converged'].append(recall)
+                    study_metrics['iter_precision_converged'].append(precision)
+                    study_metrics['iter_f1_converged'].append(f1)
+                json.dump(study_metrics,
+                        open(f'{STORE_BASE_PATH}/' + project_id + '/study_metrics.json', 'w'))
 
         else:
             msg = '[SUCCESS]: Saved feedback and built new sample.'
