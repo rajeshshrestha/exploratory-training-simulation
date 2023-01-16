@@ -194,8 +194,6 @@ class BayesianTrainer:
             #             removed_pairs.add((x_, y_))
 
             for i in data_idxs:
-                if i in marked_rows:
-                    continue
 
                 compliance_num = len([idx for idx in scenarios[self.scenario_id]['hypothesis_space'][fd]['supports'][i]
                                       if idx in data_idxs])
@@ -203,6 +201,9 @@ class BayesianTrainer:
                                      if idx in data_idxs])
                 
                 del_num = compliance_num - violation_num
+                if i in marked_rows:
+                    del_num = - del_num
+                    
                 if del_num > 0:
                     fd_m.alpha += 1
                 elif del_num <0:
@@ -221,10 +222,11 @@ class BayesianTrainer:
 
             fd_m.alpha_history.append(fd_m.alpha)
             fd_m.beta_history.append(fd_m.beta)
-            fd_m.conf = fd_m.alpha/(fd_m.alpha + fd_m.beta)
+            fd_m.conf = fd_m.alpha/(fd_m.alpha + fd_m.beta+1e-12)
 
         # for fd, fd_m in self.fd_metadata.items():
-        #     print(fd, fd_m.conf, fd_m.alpha, fd_m.beta)
+        #     print(fd, round(fd_m.conf,2), round(fd_m.alpha,2), round(fd_m.beta,2))
+        # print("--------------------------------------------------------------------------")
 
     @staticmethod
     def compute_conditional_clean_prob(idx, fd, fd_prob, scenario_id, data_indices=None):

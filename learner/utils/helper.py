@@ -179,19 +179,17 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
         successes = 0  # number of tuples that are not in a violation of this FD in the sample
         failures = 0  # number of tuples that ARE in a violation of this FD in the sample
 
-        # Calculate which pairs have been marked and remove them from calculation
-        removed_pairs = set()
+        # # Calculate which pairs have been marked and remove them from calculation
+        # removed_pairs = set()
 
-        for x in marked_rows:
-            for y in s_in.index:
-                x_, y_ = (x, y) if x < y else (y, x)
-                if (x_, y_) in scenarios[scenario_id]['hypothesis_space'][fd]['violation_pairs']:
-                    removed_pairs.add((x_, y_))
+        # for x in marked_rows:
+        #     for y in s_in.index:
+        #         x_, y_ = (x, y) if x < y else (y, x)
+        #         if (x_, y_) in scenarios[scenario_id]['hypothesis_space'][fd]['violation_pairs']:
+        #             removed_pairs.add((x_, y_))
 
         # Calculate successes and failures (to use for updating alpha and beta)
         for i in s_in.index:
-            if i in marked_rows:
-                continue
             # Todo: Adjust this logic of defining success
             compliance_num = len([idx for idx in scenarios[scenario_id]
                                  ['hypothesis_space'][fd]['supports'][i]
@@ -202,6 +200,8 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
                                  if idx in s_in.index])
 
             del_num = compliance_num - violation_num
+            if i in marked_rows:
+                del_num = - del_num
             if del_num > 0:
                 successes += 1
             elif del_num <0:
@@ -224,7 +224,7 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
         fd_m.beta += failures
         fd_m.beta_history.append(StudyMetric(
             iter_num=current_iter, value=fd_m.beta, elapsed_time=elapsed_time))
-        fd_m.conf = fd_m.alpha / (fd_m.alpha + fd_m.beta)
+        fd_m.conf = fd_m.alpha / (fd_m.alpha + fd_m.beta+1e-12)
         fd_m.conf_history.append(StudyMetric(
             iter_num=current_iter, value=fd_m.conf, elapsed_time=elapsed_time))
         logger.info(f'FD: {fd}, conf: {fd_m.conf}, '
@@ -233,7 +233,13 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
                                       models_dict[scenario_id]['model'][fd])
         if trainer_model is not None:
             mae_trainer_model_error += abs(fd_m.conf - trainer_model[fd])
-
+    
+    # for fd, fd_m in fd_metadata.items():
+    #     print(fd, round(fd_m.conf,2), round(fd_m.alpha,2), round(fd_m.beta,2))
+    # print("==========================================================================")
+    
+    # import time
+    # time.sleep(5)
     '''Divide by number of fds'''
     mae_ground_model_error = mae_ground_model_error/len(fd_metadata)
     logger.info(f"MAE Ground Model Conf Error: {mae_ground_model_error}")
