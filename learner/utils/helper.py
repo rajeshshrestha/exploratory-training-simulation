@@ -194,22 +194,27 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
                 continue
             # Todo: Adjust this logic of defining success
             compliance_num = len([idx for idx in scenarios[scenario_id]
-                                 ['hypothesis_space'][fd]['supports'].get(
-                                     i, [])
+                                 ['hypothesis_space'][fd]['supports'][i]
                                  if idx in s_in.index])
             violation_num = len([idx for idx in scenarios[scenario_id]
                                  ['hypothesis_space']
-                                 [fd]['violations'].get(i, [])
+                                 [fd]['violations'][i]
                                  if idx in s_in.index])
 
-            if (compliance_num-violation_num) >= 0:  # tuple is clean
+            del_num = compliance_num - violation_num
+            if del_num > 0:
                 successes += 1
-            else:
-                # tuple is dirty but it's part of a vio that the user caught (i.e. they marked the wrong tuple as the error but still found the vio)
-                if len([x for x in removed_pairs if i in x]) > 0:
-                    successes += 1
-                else:  # tuple is dirty and they missed the vio, or the vio isn't in a pair in the sample
-                    failures += 1
+            elif del_num <0:
+                failures += 1
+
+            # if (compliance_num-violation_num) >= 0:  # tuple is clean
+            #     successes += 1
+            # else:
+            #     # tuple is dirty but it's part of a vio that the user caught (i.e. they marked the wrong tuple as the error but still found the vio)
+            #     if len([x for x in removed_pairs if i in x]) > 0:
+            #         successes += 1
+            #     else:  # tuple is dirty and they missed the vio, or the vio isn't in a pair in the sample
+            #         failures += 1
 
         # Update alpha and beta
         fd_m.alpha += successes

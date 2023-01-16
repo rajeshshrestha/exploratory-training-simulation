@@ -197,15 +197,21 @@ class BayesianTrainer:
                 # if i in marked_rows:
                 #     continue
 
-                compliance_num = len([idx for idx in scenarios[self.scenario_id]['hypothesis_space'][fd]['supports'].get(i, [])
+                compliance_num = len([idx for idx in scenarios[self.scenario_id]['hypothesis_space'][fd]['supports'][i]
                                       if idx in data_idxs])
-                violation_num = len([idx for idx in scenarios[self.scenario_id]['hypothesis_space'][fd]['violations'].get(i, [])
+                violation_num = len([idx for idx in scenarios[self.scenario_id]['hypothesis_space'][fd]['violations'][i]
                                      if idx in data_idxs])
-
-                if (compliance_num-violation_num) >= 0:
+                
+                del_num = compliance_num - violation_num
+                if del_num > 0:
                     fd_m.alpha += 1
-                else:
+                elif del_num <0:
                     fd_m.beta += 1
+
+                # if (compliance_num-violation_num) >= 0:
+                #     fd_m.alpha += 1
+                # else:
+                #     fd_m.beta += 1
 
                     # # tuple is dirty but it's part of a vio that the user caught (i.e. they marked the wrong tuple as the error but still found the vio)
                     # if len([x for x in removed_pairs if i in x]) > 0:
