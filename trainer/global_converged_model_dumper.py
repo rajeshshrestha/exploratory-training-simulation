@@ -9,10 +9,11 @@ def dump_converged_model(scenario):
         trainer_type="bayesian",
         use_val_data=True,
         trainer_prior_type="random",
-        learner_prior_type="random",)
+        learner_prior_type="random",
+        is_global= True)
     
     os.makedirs("../converged_models", exist_ok=True)
-    with open(f"../converged_models/converged_global_{scenario}.json", "w") as fp:
+    with open(f"../converged_models/converged_global_trainer_{scenario}.json", "w") as fp:
         json.dump(model, fp)
 
 

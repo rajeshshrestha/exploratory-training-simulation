@@ -19,8 +19,6 @@ import argparse
 # %%
 '''Parse arguments'''
 parser = argparse.ArgumentParser()
-parser.add_argument('--max-clean-num', default=1500, type=int)
-parser.add_argument('--max-dirty-prop', default=0.1, type=float)
 parser.add_argument('--dataset', default='airport', type=str)
 
 args = parser.parse_args()
@@ -29,8 +27,6 @@ print(args)
 os.makedirs("./data/processed-data", exist_ok=True)
 os.makedirs("./data/processed-exp-data", exist_ok=True)
 
-clean_max_num = args.max_clean_num
-dirty_sample_percentage = args.max_dirty_prop
 
 DATASET = args.dataset
 assert DATASET in ['airport', 'omdb', 'tax', 'hospital'], f"Invalid dataset: {DATASET} passed"
@@ -186,12 +182,9 @@ else:
     # pprint(conditional_clean_probability_dict)
     print(len(clean_indices), len(dirty_indices))
 
-clean_sample_idxs = np.random.choice(list(clean_indices), min(
-    len(clean_indices), clean_max_num), replace=False)
-dirty_sample_idxs = np.random.choice(list(dirty_indices), int(
-    min(len(dirty_indices), dirty_sample_percentage*len(clean_sample_idxs))), replace=False)
-sampled_data_indices = set(clean_sample_idxs).union(set(dirty_sample_idxs))
-print(len(sampled_data_indices))
+dirty_data_ratio = len(dirty_indices)/(len(clean_indices)+len(dirty_indices))
+# sampled_data_indices = set(clean_sample_idxs).union(set(dirty_sample_idxs))
+# print(len(sampled_data_indices))
 
 
 # %% [markdown]
@@ -200,86 +193,86 @@ print(len(sampled_data_indices))
 # %%
 
 # %%
-'''Assume every data to be clean at the beginning and compute the model based on that'''
-new_model = deepcopy(model_dict[DATASET]['model'])
-model_mae = float("inf")
+# '''Assume every data to be clean at the beginning and compute the model based on that'''
+# new_model = deepcopy(model_dict[DATASET]['model'])
+# model_mae = float("inf")
 
-new_data_indices = sampled_data_indices
+# new_data_indices = sampled_data_indices
 
-while model_mae > 1e-05:
+# while model_mae > 1e-05:
 
-    '''Use current model to predict clean and dirty indices'''
-    top_10_fds = dict(
-        sorted(new_model.items(), key=itemgetter(1), reverse=True)[:10])
+#     '''Use current model to predict clean and dirty indices'''
+#     top_10_fds = dict(
+#         sorted(new_model.items(), key=itemgetter(1), reverse=True)[:10])
 
-    new_conditional_clean_probability_dict = dict()
-    new_clean_indices = set()
-    new_dirty_indices = set()
+#     new_conditional_clean_probability_dict = dict()
+#     new_clean_indices = set()
+#     new_dirty_indices = set()
 
-    for idx in new_data_indices:
-        new_conditional_clean_probability_dict[idx] = {'hypothesis': dict()}
-        for fd, model_probab in top_10_fds.items():
-            new_conditional_clean_probability_dict[idx]['hypothesis'][fd] = get_conditional_clean_prob(
-                idx, fd, model_probab=model_probab, valid_indices=new_data_indices)
-        new_conditional_clean_probability_dict[idx]['average'] = np.mean(
-            list(new_conditional_clean_probability_dict[idx]['hypothesis'].values()))
-        is_idx_clean = new_conditional_clean_probability_dict[idx]['average'] >= 0.5
-        new_conditional_clean_probability_dict[idx]['is_clean'] = is_idx_clean
+#     for idx in new_data_indices:
+#         new_conditional_clean_probability_dict[idx] = {'hypothesis': dict()}
+#         for fd, model_probab in top_10_fds.items():
+#             new_conditional_clean_probability_dict[idx]['hypothesis'][fd] = get_conditional_clean_prob(
+#                 idx, fd, model_probab=model_probab, valid_indices=new_data_indices)
+#         new_conditional_clean_probability_dict[idx]['average'] = np.mean(
+#             list(new_conditional_clean_probability_dict[idx]['hypothesis'].values()))
+#         is_idx_clean = new_conditional_clean_probability_dict[idx]['average'] >= 0.5
+#         new_conditional_clean_probability_dict[idx]['is_clean'] = is_idx_clean
 
-        if is_idx_clean:
-            new_clean_indices.add(idx)
-        else:
-            new_dirty_indices.add(idx)
+#         if is_idx_clean:
+#             new_clean_indices.add(idx)
+#         else:
+#             new_dirty_indices.add(idx)
 
-    else:
-        # pprint(new_conditional_clean_probability_dict)
-        print(f"Clean Data Number: {len(new_clean_indices)},"
-              f"Dirty Data Number: {len(new_dirty_indices)},"
-              f"Dirty Data Proportion: {len(new_dirty_indices)/len(new_clean_indices.union(new_dirty_indices))}")
+#     else:
+#         # pprint(new_conditional_clean_probability_dict)
+#         print(f"Clean Data Number: {len(new_clean_indices)},"
+#               f"Dirty Data Number: {len(new_dirty_indices)},"
+#               f"Dirty Data Proportion: {len(new_dirty_indices)/len(new_clean_indices.union(new_dirty_indices))}")
 
-    '''Use clean data to estimate model'''
-    model_mae = 0
-    for hypothesis in new_scenarios_dict[DATASET]['hypothesis_space']:
-        hypothesis_info_dict = new_scenarios_dict[DATASET]['hypothesis_space'][hypothesis]
-        if len(hypothesis_info_dict['lfd']+hypothesis_info_dict['rfd']) not in FD_ATTRIBUTE_NUMS:
-            continue
+#     '''Use clean data to estimate model'''
+#     model_mae = 0
+#     for hypothesis in new_scenarios_dict[DATASET]['hypothesis_space']:
+#         hypothesis_info_dict = new_scenarios_dict[DATASET]['hypothesis_space'][hypothesis]
+#         if len(hypothesis_info_dict['lfd']+hypothesis_info_dict['rfd']) not in FD_ATTRIBUTE_NUMS:
+#             continue
 
-        '''Only consider the clean estimated indices'''
-        support_pairs_num, violation_pairs_num = 0, 0
-        for idx in hypothesis_info_dict['supports']:
-            if idx not in new_clean_indices:
-                continue
-            support_pairs_num += len([idx1 for idx1 in hypothesis_info_dict['supports']
-                                     [idx] if idx1 in new_clean_indices])
+#         '''Only consider the clean estimated indices'''
+#         support_pairs_num, violation_pairs_num = 0, 0
+#         for idx in hypothesis_info_dict['supports']:
+#             if idx not in new_clean_indices:
+#                 continue
+#             support_pairs_num += len([idx1 for idx1 in hypothesis_info_dict['supports']
+#                                      [idx] if idx1 in new_clean_indices])
 
-        for idx in hypothesis_info_dict['violations']:
-            if idx not in new_clean_indices:
-                continue
-            violation_pairs_num += len(
-                [idx1 for idx1 in hypothesis_info_dict['violations'][idx] if idx1 in new_clean_indices])
+#         for idx in hypothesis_info_dict['violations']:
+#             if idx not in new_clean_indices:
+#                 continue
+#             violation_pairs_num += len(
+#                 [idx1 for idx1 in hypothesis_info_dict['violations'][idx] if idx1 in new_clean_indices])
 
-        fd_prob = support_pairs_num / \
-            (support_pairs_num+violation_pairs_num+1e-7)
+#         fd_prob = support_pairs_num / \
+#             (support_pairs_num+violation_pairs_num+1e-7)
 
-        '''Compute mae with previous model value'''
-        model_mae += abs(new_model[hypothesis]-fd_prob)
-        new_model[hypothesis] = fd_prob
+#         '''Compute mae with previous model value'''
+#         model_mae += abs(new_model[hypothesis]-fd_prob)
+#         new_model[hypothesis] = fd_prob
 
-    print(f"MAE: {model_mae}")
+#     print(f"MAE: {model_mae}")
 
-final_dirty_proportion = len(new_dirty_indices) / \
-    len(new_clean_indices.union(new_dirty_indices))
-print(f"Final Proportion: {final_dirty_proportion}")
+# final_dirty_proportion = len(new_dirty_indices) / \
+#     len(new_clean_indices.union(new_dirty_indices))
+# print(f"Final Proportion: {final_dirty_proportion}")
 # %%
-model_dict[DATASET] = {'model': new_model,
-                       'dirty_proportion': final_dirty_proportion}
+model_dict[DATASET] = {'model': model,
+                       'dirty_proportion': dirty_data_ratio}
 model_dict[DATASET]['predictions'] = dict(
-    (idx, True) if idx in new_clean_indices else (idx, False) for idx in new_data_indices)
+    (idx, True) if idx in clean_indices else (idx, False) for idx in data_indices)
 with open("./trainer_model.json", 'w') as fp:
     json.dump(model_dict, fp)
 
 # %%
-sampled_df = raw_df.loc[list(new_data_indices)]
+sampled_df = raw_df
 sampled_df
 
 # %%
@@ -404,45 +397,45 @@ def get_average_cond_clean_prediction(indices, model, scenario_id):
 # %%
 
 
-_model = dict(sorted(_models_dict[DATASET]['model'].items(), key=itemgetter(1),
-                     reverse=True)[:10])
-_clean_indices = set([idx for idx in _models_dict[DATASET]
-                     ['predictions'] if _models_dict[DATASET]['predictions'][idx]])
-_clean_probab_dict = get_average_cond_clean_prediction(
-    _processed_df[DATASET].index, model=_model, scenario_id=DATASET)
+# _model = dict(sorted(_models_dict[DATASET]['model'].items(), key=itemgetter(1),
+#                      reverse=True)[:10])
+# _clean_indices = set([idx for idx in _models_dict[DATASET]
+#                      ['predictions'] if _models_dict[DATASET]['predictions'][idx]])
+# _clean_probab_dict = get_average_cond_clean_prediction(
+#     _processed_df[DATASET].index, model=_model, scenario_id=DATASET)
 
-# %%
-# Check the clean label in the model file
-for idx in _processed_df[DATASET].index:
-    _clean = _clean_probab_dict[idx] >= 0.5
-    if _clean == _models_dict[DATASET]['predictions'][idx]:
-        continue
-    print(idx, _clean, _models_dict[DATASET]['predictions'][idx])
+# # %%
+# # Check the clean label in the model file
+# for idx in _processed_df[DATASET].index:
+#     _clean = _clean_probab_dict[idx] >= 0.5
+#     if _clean == _models_dict[DATASET]['predictions'][idx]:
+#         continue
+#     print(idx, _clean, _models_dict[DATASET]['predictions'][idx])
 
-# %%
-# Check the aggreage model on the overall data
-for hypothesis in _models_dict[DATASET]['model']:
-    hypothesis_info_dict = _filtered_processed_scenarios[DATASET]['hypothesis_space'][hypothesis]
+# # %%
+# # Check the aggreage model on the overall data
+# for hypothesis in _models_dict[DATASET]['model']:
+#     hypothesis_info_dict = _filtered_processed_scenarios[DATASET]['hypothesis_space'][hypothesis]
 
-    support_pairs_num, violation_pairs_num = 0, 0
-    for idx in hypothesis_info_dict['supports']:
-        if idx not in _clean_indices:
-            continue
-        support_pairs_num += len(
-            set(hypothesis_info_dict['supports'][idx]).intersection(_clean_indices))
+#     support_pairs_num, violation_pairs_num = 0, 0
+#     for idx in hypothesis_info_dict['supports']:
+#         if idx not in _clean_indices:
+#             continue
+#         support_pairs_num += len(
+#             set(hypothesis_info_dict['supports'][idx]).intersection(_clean_indices))
 
-    for idx in hypothesis_info_dict['violations']:
-        if idx not in _clean_indices:
-            continue
-        violation_pairs_num += len(
-            set(hypothesis_info_dict['violations'][idx]).intersection(_clean_indices))
+#     for idx in hypothesis_info_dict['violations']:
+#         if idx not in _clean_indices:
+#             continue
+#         violation_pairs_num += len(
+#             set(hypothesis_info_dict['violations'][idx]).intersection(_clean_indices))
 
-    is_correct = round(support_pairs_num/(support_pairs_num+violation_pairs_num+1e-7),
-                       3) == round(_models_dict[DATASET]['model'][hypothesis], 3)
+#     is_correct = round(support_pairs_num/(support_pairs_num+violation_pairs_num+1e-7),
+#                        3) == round(_models_dict[DATASET]['model'][hypothesis], 3)
 
-    if not is_correct:
-        print((support_pairs_num/(support_pairs_num+violation_pairs_num)),
-              _models_dict[DATASET]['model'][hypothesis])
+#     if not is_correct:
+#         print((support_pairs_num/(support_pairs_num+violation_pairs_num)),
+#               _models_dict[DATASET]['model'][hypothesis])
 
 # %%
 validation_indices = dict((dataset, sample(

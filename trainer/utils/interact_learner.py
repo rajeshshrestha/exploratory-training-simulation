@@ -13,7 +13,8 @@ def initialize_learner(scenario_id,
                        trainer_type,
                        use_val_data,
                        trainer_prior_type,
-                       learner_prior_type):
+                       learner_prior_type,
+                       is_global):
     """
     Initialize the project and the user intital prior belief
     """
@@ -31,7 +32,8 @@ def initialize_learner(scenario_id,
             "trainer_type": trainer_type,
             'use_val_data': use_val_data,
             "trainer_prior_type": trainer_prior_type,
-            "learner_prior_type": learner_prior_type
+            "learner_prior_type": learner_prior_type,
+            "is_global": is_global
         },
     )
     if  response.status_code < 200 or response.status_code >=300:

@@ -102,22 +102,22 @@ def compute_soft_metrics(indices, model, scenario_id, top_k):
 
     return accuracy, recall, precision, f1
 
-def compute_metrics_using_converged_trainer_model(indices, model,
-                                                  converged_trainer_model,
+def compute_metrics_using_converged_model(indices, model,
+                                                  converged_model,
                                                   scenario_id,
                                                   top_k):
     '''Pick top k fds if needed'''
     if 0 < top_k < len(model):
         model = dict(sorted(model.items(), key=itemgetter(1),
                      reverse=True)[:top_k])
-        converged_trainer_model = dict(sorted(converged_trainer_model.items(),
+        converged_model = dict(sorted(converged_model.items(),
                                               key=itemgetter(1), reverse=True)[:top_k])
 
     conditional_clean_probability_dict = get_average_cond_clean_prediction(
         indices=indices, model=model, scenario_id=scenario_id)
     ground_conditional_clean_probability_dict = \
         get_average_cond_clean_prediction(indices=indices,
-                                          model=converged_trainer_model,
+                                          model=converged_model,
                                           scenario_id=scenario_id)
     logger.info(conditional_clean_probability_dict)
 
@@ -138,7 +138,7 @@ def compute_metrics_using_converged_trainer_model(indices, model,
 
     return accuracy, recall, precision, f1
 
-def compute_soft_metrics_using_converged_trainer_model(indices, model,
+def compute_soft_metrics_using_converged_model(indices, model,
                                                   converged_trainer_model,
                                                   scenario_id,
                                                   top_k):

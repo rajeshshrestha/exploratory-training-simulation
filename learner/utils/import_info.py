@@ -40,6 +40,8 @@ class Import(Resource):
         use_val_data = (request.form.get('use_val_data').lower() == "true")
         learner_prior_type = request.form.get('learner_prior_type')
         trainer_prior_type = request.form.get('trainer_prior_type')
+        is_global = (request.form.get('is_global').lower() == "true")
+
 
         if scenario_id is None or email is None:
             scenario_id = json.loads(request.data)['scenario_id']
@@ -54,6 +56,8 @@ class Import(Resource):
                             'use_val_data'].lower() == 'true')
             learner_prior_type = json.loads(request.data)['learner_prior_type']
             trainer_prior_type = json.loads(request.data)['trainer_prior_type']
+            is_global = (json.loads(request.data)[
+                            'is_global'].lower() == 'true')
 
         logger.info(initial_user_h)
 
@@ -115,7 +119,8 @@ class Import(Resource):
             'trainer_type': trainer_type,
             'use_val_data': use_val_data,
             'trainer_prior_type': trainer_prior_type,
-            'learner_prior_type': learner_prior_type
+            'learner_prior_type': learner_prior_type,
+            'is_global': is_global
         }
 
         with open(new_project_dir + '/project_info.json', 'w') as f:

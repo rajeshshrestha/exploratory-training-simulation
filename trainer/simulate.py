@@ -14,7 +14,8 @@ def run(scenario_id,
         sampling_method,
         use_val_data,
         trainer_prior_type,
-        learner_prior_type):
+        learner_prior_type,
+        is_global=False):
 
     # Initialize the learner
     project_id, _ = initialize_learner(
@@ -23,7 +24,8 @@ def run(scenario_id,
         trainer_type=trainer_type,
         use_val_data=use_val_data,
         trainer_prior_type=trainer_prior_type,
-        learner_prior_type=learner_prior_type,)
+        learner_prior_type=learner_prior_type,
+        is_global = is_global)
 
     # Get the first batch of sample from the learner
     data, columns, feedback = get_initial_sample(project_id=project_id)
@@ -41,6 +43,8 @@ def run(scenario_id,
     # Begin iterations and continue till done
     while msg != '[DONE]' and (len(data) > 0):
         iter_num += 1
+        if is_global:
+            print(iter_num)
 
         feedback_dict = trainer.get_feedback_dict(data, feedback)
 
