@@ -1,5 +1,5 @@
 #!/bin/bash
-RUNS=25
+RUNS=10
 USE_VAL_DATA=false
 RUN_PARALLEL_SIMULATION=true
 export PORT="${PORT:-5000}"

@@ -1,7 +1,7 @@
 import os
 
 TOTAL_SCENARIOS = 1
-TOTAL_ITERATIONS = int(os.getenv("TOTAL_ITERATIONS",30)) #30
+TOTAL_ITERATIONS = int(os.getenv("TOTAL_ITERATIONS",15)) #30
 RESAMPLE = (os.getenv("RESAMPLE", "false").lower() == "true")
 SAMPLE_SIZE = 10
 MODEL_FDS_TOP_K = 10

@@ -150,6 +150,9 @@ class Feedback(Resource):
                 with open(f'../converged_models/converged_global_learner_{scenario_id}.json', 'r') as fp:
                     converged_global_model = json.load(fp)
 
+                # with open(f'{STORE_BASE_PATH}/{project_id}/iteration_fd_metadata/learner/model_{current_iter-1}.pk', 'rb') as fp:
+                #     converged_learner_model = pickle.load(fp)
+
                 for i in range(current_iter):
                     with open(f'{STORE_BASE_PATH}/{project_id}/iteration_fd_metadata/learner/model_{i}.pk', 'rb') as fp:
                         learner_model = pickle.load(fp)
