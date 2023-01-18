@@ -203,11 +203,16 @@ class BayesianTrainer:
                 del_num = compliance_num - violation_num
                 if i in marked_rows:
                     del_num = - del_num
-                    
+
                 if del_num > 0:
                     fd_m.alpha += 1
                 elif del_num <0:
                     fd_m.beta += 1
+                else:
+                    if compliance_num == 0:
+                        fd_m.alpha += 1
+                    else:
+                        fd_m.beta += 1
 
                 # if (compliance_num-violation_num) >= 0:
                 #     fd_m.alpha += 1

@@ -132,6 +132,10 @@ def returnActiveLearningTuples(sample_size, project_id,
 
     unserved_indices = pickle.load(
         open(f'{STORE_BASE_PATH}/' + project_id + '/unserved_indices.pk', 'rb'))
+    
+    with open(f'{STORE_BASE_PATH}/' + project_id + '/project_info.json', 'r') as f:
+        project_info = json.load(f)
+        scenario_id = project_info['scenario_id']
 
     '''Subsample candiate unserved indices'''
     if not resample:
@@ -145,10 +149,6 @@ def returnActiveLearningTuples(sample_size, project_id,
             candidate_unserved_indices = unserved_indices
     else:
         candidate_unserved_indices = set(processed_dfs[scenario_id].index)
-
-    with open(f'{STORE_BASE_PATH}/' + project_id + '/project_info.json', 'r') as f:
-        project_info = json.load(f)
-        scenario_id = project_info['scenario_id']
 
     model_dict = dict((fd, fd_m.conf)for fd, fd_m in fd_metadata.items())
     top_k_model_dict = dict(
@@ -211,6 +211,10 @@ def returnStochasticActiveLRTuples(sample_size, project_id,
 
     unserved_indices = pickle.load(
         open(f'{STORE_BASE_PATH}/' + project_id + '/unserved_indices.pk', 'rb'))
+    
+    with open(f'{STORE_BASE_PATH}/' + project_id + '/project_info.json', 'r') as f:
+        project_info = json.load(f)
+        scenario_id = project_info['scenario_id']
 
     '''Subsample candiate unserved indices'''
     if not resample:
@@ -224,10 +228,6 @@ def returnStochasticActiveLRTuples(sample_size, project_id,
             candidate_unserved_indices = unserved_indices
     else:
         candidate_unserved_indices = set(processed_dfs[scenario_id].index)
-
-    with open(f'{STORE_BASE_PATH}/' + project_id + '/project_info.json', 'r') as f:
-        project_info = json.load(f)
-        scenario_id = project_info['scenario_id']
 
     model_dict = dict((fd, fd_m.conf)for fd, fd_m in fd_metadata.items())
     top_k_model_dict = dict(

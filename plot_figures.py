@@ -153,22 +153,25 @@ def compute_average_metrics(results_dict):
                                 'iter_f1_converged',
                                 'iter_mae_ground_model_error',
                                 'iter_mae_trainer_model_error']:
-                for exp_metrics_lst in zip(*results_dict[trainer_type][sampling_type][metric_type]):
-                    average_lst = []
-                    # print(exp_metrics_lst)
+                try:
+                    for exp_metrics_lst in zip(*results_dict[trainer_type][sampling_type][metric_type]):
+                        average_lst = []
+                        # print(exp_metrics_lst)
 
-                    max_len = max(len(exp_metric)
-                                  for exp_metric in exp_metrics_lst)
-                    # print(max_len)
-                    for idx in range(max_len):
-                        candidate_lst = [exp_metric[idx] for exp_metric in exp_metrics_lst if idx < len(
-                            exp_metric) and str(exp_metric[idx]) != 'nan']
-                        if candidate_lst:
-                            average_lst.append(mean(candidate_lst))
-                        else:
-                            average_lst.append(np.nan)
-                    average_dict[trainer_type][sampling_type][metric_type].append(
-                        average_lst)
+                        max_len = max(len(exp_metric)
+                                    for exp_metric in exp_metrics_lst)
+                        # print(max_len)
+                        for idx in range(max_len):
+                            candidate_lst = [exp_metric[idx] for exp_metric in exp_metrics_lst if idx < len(
+                                exp_metric) and str(exp_metric[idx]) != 'nan']
+                            if candidate_lst:
+                                average_lst.append(mean(candidate_lst))
+                            else:
+                                average_lst.append(np.nan)
+                        average_dict[trainer_type][sampling_type][metric_type].append(
+                            average_lst)
+                except Exception as e:
+                    print(e)
     return average_dict
 
 
@@ -231,32 +234,30 @@ def plot_figures(run_folder_path):
                    'mae_trainer_model_error']:
         # for metric in ['mae_trainer_model_error', 'mae_ground_model_error']:
         for trainer_type in ['bayesian']:
-            try:
-                fig = plt.figure(figsize=(6, 4))
-                for sampling_method in average_dict[trainer_type]:
+            fig = plt.figure(figsize=(6, 4))
+            for sampling_method in average_dict[trainer_type]:
+                if len(average_dict[trainer_type][sampling_method][f'iter_{metric}']) != 0 and len(average_dict[trainer_type][sampling_method][f'iter_{metric}'][0]) != 0 and len(average_dict[trainer_type][sampling_method][f'iter_{metric}'][2]) !=0:
                     plt.plot(average_dict[trainer_type][sampling_method]
-                             [f'iter_{metric}'][0], average_dict[trainer_type][sampling_method][f'iter_{metric}'][2], label='US' if sampling_method == "ActiveLR" else sampling_method)
-                plt.xlabel('Iterations')
-                if metric == 'mae_ground_model_error':
-                    plt.ylabel("Mean Absolute Error(MAE)")
-                    # plt.title(
-                    #     "Difference between Ground Model and Learner Model")
-                elif metric == 'mae_trainer_model_error':
-                    plt.ylabel("Mean Absolute Error(MAE)")
-                    # plt.title(
-                    #     "Difference between Trainer Model and Learner Model")
-                else:
-                    plt.ylabel(metric)
-                    # plt.title(
-                    #     "Predictions between the Learner and the Ground Truth Model")
-                plt.ylim(bottom=0)
-                plt.legend()
-                plt.tight_layout()
+                            [f'iter_{metric}'][0], average_dict[trainer_type][sampling_method][f'iter_{metric}'][2], label='US' if sampling_method == "ActiveLR" else sampling_method)
+            plt.xlabel('Iterations')
+            if metric == 'mae_ground_model_error':
+                plt.ylabel("Mean Absolute Error(MAE)")
+                # plt.title(
+                #     "Difference between Ground Model and Learner Model")
+            elif metric == 'mae_trainer_model_error':
+                plt.ylabel("Mean Absolute Error(MAE)")
+                # plt.title(
+                #     "Difference between Trainer Model and Learner Model")
+            else:
+                plt.ylabel(metric)
+                # plt.title(
+                #     "Predictions between the Learner and the Ground Truth Model")
+            plt.ylim(bottom=0)
+            plt.legend()
+            plt.tight_layout()
 
-                figures.append(fig)
-                figure_names.append(f'{trainer_type}_{metric}.png')
-            except Exception as e:
-                print(e)
+            figures.append(fig)
+            figure_names.append(f'{trainer_type}_{metric}.png')
 
     return figures, figure_names
 

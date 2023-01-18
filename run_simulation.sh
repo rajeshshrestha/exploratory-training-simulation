@@ -4,14 +4,16 @@ USE_VAL_DATA=false
 RUN_PARALLEL_SIMULATION=true
 export PORT="${PORT:-5000}"
 export PROJECT_NAME="${PROJECT_NAME:-test}"
+export RESAMPLE=true
+export TOTAL_ITERATIONS=50
 TRAINER_TYPE=bayesian
 
 
 echo $PROJECT_NAME
 sleep 10
-for DATASET in airport omdb hospital tax
+for DATASET in omdb airport hospital tax 
 do
-    for MAX_DIRTY_PROP in  0.3
+    for MAX_DIRTY_PROP in 0.3 #0.05 0.1
     do
         echo "Dumping data.."
         python dump_processed_data.py --dataset $DATASET --max-clean-num 1000 --max-dirty-prop $MAX_DIRTY_PROP
@@ -25,11 +27,11 @@ do
         cd ./trainer
 
         # for TRAINER_TYPE in full-oracle learning-oracle bayesian
-        for TRAINER_PRIOR_TYPE in test # data-estimate uniform-0.1 uniform-0.9 random
+        for TRAINER_PRIOR_TYPE in random # all # data-estimate uniform-0.1 uniform-0.9 random
         do
-            for LEARNER_PRIOR_TYPE in test #data-estimate uniform-0.1 uniform-0.9 random
+            for LEARNER_PRIOR_TYPE in random # all #data-estimate uniform-0.1 uniform-0.9 random
             do
-                for SAMPLING_TYPE  in test #RANDOM ACTIVELR STOCHASTICBR STOCHASTICUS
+                for SAMPLING_TYPE  in all #RANDOM ACTIVELR STOCHASTICBR STOCHASTICUS
                 do
                     echo "Running simulation for $DATASET $TRAINER_TYPE $SAMPLING_TYPE $RUNS $USE_VAL_DATA $TRAINER_PRIOR_TYPE $LEARNER_PRIOR_TYPE"
                     python simulate.py $DATASET $TRAINER_TYPE $SAMPLING_TYPE $RUNS $USE_VAL_DATA $TRAINER_PRIOR_TYPE $LEARNER_PRIOR_TYPE $RUN_PARALLEL_SIMULATION

@@ -202,10 +202,17 @@ def interpretFeedback(s_in, feedback, project_id, current_iter,
             del_num = compliance_num - violation_num
             if i in marked_rows:
                 del_num = - del_num
+                
             if del_num > 0:
                 successes += 1
             elif del_num <0:
                 failures += 1
+            else:
+                if compliance_num == 0:
+                    successes += 1
+                else:
+                    failures += 1
+
 
             # if (compliance_num-violation_num) >= 0:  # tuple is clean
             #     successes += 1

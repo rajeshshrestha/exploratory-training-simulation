@@ -75,8 +75,8 @@ if __name__ == '__main__':
     sampling_method = sys.argv[3]
     num_runs = int(sys.argv[4])  # How many runs of this simulation to do
     use_val_data = (sys.argv[5].lower() == 'true')
-    # trainer_prior_type = sys.argv[6].lower()
-    # learner_prior_type = sys.argv[7].lower()
+    trainer_prior_type = sys.argv[6].lower()
+    learner_prior_type = sys.argv[7].lower()
 
     if len(sys.argv) > 8:
         run_parallel = (sys.argv[8].lower() == 'true')
@@ -87,41 +87,59 @@ if __name__ == '__main__':
                             'learning-oracle',
                             'bayesian'],\
         "Invalid trainer type passed!!!"
-    # assert sampling_method in ['RANDOM',
-    #                            'ACTIVELR',
-    #                            'STOCHASTICBR',
-    #                            'STOCHASTICUS'],\
-    #     "Invalid sampling method passed!!!"
-
-    # assert trainer_prior_type in ['uniform-0.1',
-    #                               'uniform-0.5',
-    #                               'uniform-0.9',
-    #                               'data-estimate',
-    #                               'random'
-    #                               ], "Invalid Trainer Prior type used!!!"
-    # assert learner_prior_type in ['uniform-0.1',
-    #                               'uniform-0.5',
-    #                               'uniform-0.9',
-    #                               'data-estimate',
-    #                               'random'
-    #                               ], "Invalid Learner Prior type used!!!"
-
-    for learner_prior_type in ['uniform-0.1',
-                                    #   'uniform-0.5',
-                                    'uniform-0.9',
-                                    'data-estimate',
-                                    'random'
-                                    ]:
-        for trainer_prior_type in ['uniform-0.1',
-                                    #   'uniform-0.5',
-                                    'uniform-0.9',
-                                    'data-estimate',
-                                    'random'
-                                    ]:
-            for sampling_method in ['RANDOM',
+    assert sampling_method in ['all',
+                                'RANDOM',
+                               'ACTIVELR',
+                               'STOCHASTICBR',
+                               'STOCHASTICUS'],\
+        "Invalid sampling method passed!!!"
+    if sampling_method.lower() == 'all':
+        sampling_method_lst = ['RANDOM',
                                 'ACTIVELR',
                                 'STOCHASTICBR',
-                                'STOCHASTICUS']:
+                                'STOCHASTICUS']
+    else:
+        sampling_method_lst = [sampling_method]
+
+    assert trainer_prior_type in [ 'all',
+                                  'uniform-0.1',
+                                  'uniform-0.5',
+                                  'uniform-0.9',
+                                  'data-estimate',
+                                  'random'
+                                  ], "Invalid Trainer Prior type used!!!"
+    if trainer_prior_type.lower() == 'all':
+        trainer_prior_type_lst = ['uniform-0.1',
+                                    #   'uniform-0.5',
+                                    'uniform-0.9',
+                                    'data-estimate',
+                                    'random'
+                                    ]
+    else:
+        trainer_prior_type_lst =  [trainer_prior_type]
+
+    assert learner_prior_type in ['all',
+                                  'uniform-0.1',
+                                  'uniform-0.5',
+                                  'uniform-0.9',
+                                  'data-estimate',
+                                  'random'
+                                  ], "Invalid Learner Prior type used!!!"
+    if learner_prior_type.lower() == "all":
+        learner_prior_type_lst = ['uniform-0.1',
+                                    #   'uniform-0.5',
+                                    'uniform-0.9',
+                                    'data-estimate',
+                                    'random'
+                                    ]
+    else:
+        learner_prior_type_lst = [learner_prior_type]
+    
+
+
+    for learner_prior_type in learner_prior_type_lst:
+        for trainer_prior_type in trainer_prior_type_lst:
+            for sampling_method in sampling_method_lst:
                 print(learner_prior_type, trainer_prior_type, sampling_method)
                 if not run_parallel:
                     for i in range(num_runs):

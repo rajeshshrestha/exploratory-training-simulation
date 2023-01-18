@@ -7,7 +7,7 @@ def dump_converged_model(scenario):
     model = run(scenario_id=scenario,
         sampling_method="RANDOM",
         trainer_type="bayesian",
-        use_val_data=True,
+        use_val_data=False,
         trainer_prior_type="random",
         learner_prior_type="random",
         is_global= True)
