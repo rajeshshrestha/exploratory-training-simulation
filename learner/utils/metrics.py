@@ -30,8 +30,8 @@ def compute_conditional_clean_prob(idx,
                             [fd]['violations'].get(idx, []) if idx_ in
                              data_indices])
 
-    tuple_clean_score = math.exp(fd_prob*(compliance_num-violation_num))
-    tuple_dirty_score = math.exp(fd_prob*(-compliance_num+violation_num))
+    tuple_clean_score = math.exp(np.clip(fd_prob*(compliance_num-violation_num), -30,30))
+    tuple_dirty_score = math.exp(np.clip(fd_prob*(-compliance_num+violation_num),-30,30))
     cond_p_clean = tuple_clean_score/(tuple_clean_score+tuple_dirty_score)
 
     return cond_p_clean
@@ -183,7 +183,7 @@ def compute_entropy_values(indices, top_model_fds, scenario_id):
     probabilities = np.array([conditional_clean_probability_dict[idx]
                               for idx in indices])
     entropies = -probabilities * \
-        np.log2(probabilities)-(1-probabilities)*np.log2(1-probabilities)
+        np.log2(np.clip(probabilities, a_min=1e-12, a_max=None))-(1-probabilities)*np.log2(np.clip(1-probabilities, a_min=1e-12, a_max=None))
     entropy_dict = dict((idx, entropy_val)
                         for idx, entropy_val in zip(indices, entropies))
 

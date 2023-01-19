@@ -152,8 +152,8 @@ def get_conditional_clean_prob(idx, fd, model_probab, valid_indices=None):
         violation_num = len([idx_ for idx_ in new_scenarios_dict[DATASET]['hypothesis_space']
                             [fd]['violations'][str(idx)] if idx_ in valid_indices])
 
-    tuple_clean_score = math.exp(model_probab*(compliance_num-violation_num))
-    tuple_dirty_score = math.exp(model_probab*(-compliance_num+violation_num))
+    tuple_clean_score = math.exp(np.clip(model_probab*(compliance_num-violation_num), -30, 30))
+    tuple_dirty_score = math.exp(np.clip(model_probab*(-compliance_num+violation_num), -30, 30))
     cond_p_clean = tuple_clean_score/(tuple_clean_score+tuple_dirty_score)
     return cond_p_clean
 
@@ -384,8 +384,8 @@ def compute_conditional_clean_prob(idx, fd, fd_prob, scenario_id, data_indices=N
         violation_num = len([idx_ for idx_ in _filtered_processed_scenarios[scenario_id]['hypothesis_space']
                             [fd]['violations'][idx] if idx_ in data_indices])
 
-    tuple_clean_score = math.exp(fd_prob*(compliance_num-violation_num))
-    tuple_dirty_score = math.exp(fd_prob*(-compliance_num+violation_num))
+    tuple_clean_score = math.exp(np.clip(fd_prob*(compliance_num-violation_num), -30, 30))
+    tuple_dirty_score = math.exp(np.clip(fd_prob*(-compliance_num+violation_num), -30, 30))
     cond_p_clean = tuple_clean_score/(tuple_clean_score+tuple_dirty_score)
 
     return cond_p_clean
@@ -411,38 +411,38 @@ _clean_indices = set([idx for idx in _models_dict[DATASET]
 _clean_probab_dict = get_average_cond_clean_prediction(
     _processed_df[DATASET].index, model=_model, scenario_id=DATASET)
 
-# %%
-# Check the clean label in the model file
-for idx in _processed_df[DATASET].index:
-    _clean = _clean_probab_dict[idx] >= 0.5
-    if _clean == _models_dict[DATASET]['predictions'][idx]:
-        continue
-    print(idx, _clean, _models_dict[DATASET]['predictions'][idx])
+# # %%
+# # Check the clean label in the model file
+# for idx in _processed_df[DATASET].index:
+#     _clean = _clean_probab_dict[idx] >= 0.5
+#     if _clean == _models_dict[DATASET]['predictions'][idx]:
+#         continue
+#     print(idx, _clean, _models_dict[DATASET]['predictions'][idx])
 
-# %%
-# Check the aggreage model on the overall data
-for hypothesis in _models_dict[DATASET]['model']:
-    hypothesis_info_dict = _filtered_processed_scenarios[DATASET]['hypothesis_space'][hypothesis]
+# # %%
+# # Check the aggreage model on the overall data
+# for hypothesis in _models_dict[DATASET]['model']:
+#     hypothesis_info_dict = _filtered_processed_scenarios[DATASET]['hypothesis_space'][hypothesis]
 
-    support_pairs_num, violation_pairs_num = 0, 0
-    for idx in hypothesis_info_dict['supports']:
-        if idx not in _clean_indices:
-            continue
-        support_pairs_num += len(
-            set(hypothesis_info_dict['supports'][idx]).intersection(_clean_indices))
+#     support_pairs_num, violation_pairs_num = 0, 0
+#     for idx in hypothesis_info_dict['supports']:
+#         if idx not in _clean_indices:
+#             continue
+#         support_pairs_num += len(
+#             set(hypothesis_info_dict['supports'][idx]).intersection(_clean_indices))
 
-    for idx in hypothesis_info_dict['violations']:
-        if idx not in _clean_indices:
-            continue
-        violation_pairs_num += len(
-            set(hypothesis_info_dict['violations'][idx]).intersection(_clean_indices))
+#     for idx in hypothesis_info_dict['violations']:
+#         if idx not in _clean_indices:
+#             continue
+#         violation_pairs_num += len(
+#             set(hypothesis_info_dict['violations'][idx]).intersection(_clean_indices))
 
-    is_correct = round(support_pairs_num/(support_pairs_num+violation_pairs_num+1e-7),
-                       3) == round(_models_dict[DATASET]['model'][hypothesis], 3)
+#     is_correct = round(support_pairs_num/(support_pairs_num+violation_pairs_num+1e-7),
+#                        3) == round(_models_dict[DATASET]['model'][hypothesis], 3)
 
-    if not is_correct:
-        print((support_pairs_num/(support_pairs_num+violation_pairs_num)),
-              _models_dict[DATASET]['model'][hypothesis])
+#     if not is_correct:
+#         print((support_pairs_num/(support_pairs_num+violation_pairs_num)),
+#               _models_dict[DATASET]['model'][hypothesis])
 
 # %%
 validation_indices = dict((dataset, sample(

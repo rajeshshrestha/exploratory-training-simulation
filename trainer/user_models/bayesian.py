@@ -1,7 +1,7 @@
 from .initialize_variables import required_fds
 from .initialize_variables import scenarios
 import math
-# import numpy as np
+import numpy as np
 from operator import itemgetter
 import logging
 import random
@@ -247,8 +247,8 @@ class BayesianTrainer:
             violation_num = len([idx_ for idx_ in scenarios[scenario_id]['hypothesis_space']
                                 [fd]['violations'].get(idx, []) if idx_ in data_indices])
 
-        tuple_clean_score = math.exp(fd_prob*(compliance_num-violation_num))
-        tuple_dirty_score = math.exp(fd_prob*(-compliance_num+violation_num))
+        tuple_clean_score = math.exp(np.clip(fd_prob*(compliance_num-violation_num), -30,30))
+        tuple_dirty_score = math.exp(np.clip(fd_prob*(-compliance_num+violation_num),-30,30))
         cond_p_clean = tuple_clean_score/(tuple_clean_score+tuple_dirty_score)
 
         return cond_p_clean

@@ -1,5 +1,5 @@
 #!/bin/bash
-RUNS=10
+RUNS=25
 USE_VAL_DATA=false
 RUN_PARALLEL_SIMULATION=true
 export PORT="${PORT:-5000}"
@@ -11,7 +11,7 @@ TRAINER_TYPE=bayesian
 
 echo $PROJECT_NAME
 sleep 10
-for DATASET in omdb airport hospital tax 
+for DATASET in  tax omdb hospital airport 
 do
     for MAX_DIRTY_PROP in 0.3 #0.05 0.1
     do
@@ -21,7 +21,7 @@ do
         # dump converged global trainer model
         ./dump_converged_model.sh $DATASET
 
-        (cd learner && gunicorn -w 10 --bind 0.0.0.0:$PORT --log-level info --timeout 240 api:app)&
+        (cd learner && gunicorn -w 25 --bind 0.0.0.0:$PORT --log-level info --timeout 240 api:app)&
         
         sleep 30
         cd ./trainer
