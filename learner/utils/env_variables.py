@@ -16,7 +16,9 @@ STOCHASTIC_UNCERTAINTY_SAMPLING_GAMMA = 0.5
 LEARNER_PRIOR_VARIANCE=0.0025
 
 project_name = os.getenv("PROJECT_NAME", None)
-if project_name is None:
-    STORE_BASE_PATH = "./store"
-else:
-    STORE_BASE_PATH= os.path.join("/data/shresthr", project_name, "store")
+STORE_BASE_PATH = os.getenv("STORE_BASE_PATH", None)
+if STORE_BASE_PATH is None:
+    if project_name is None:
+            STORE_BASE_PATH = "./store"
+    else:
+        STORE_BASE_PATH= os.path.join("/data/shresthr", project_name, "store")

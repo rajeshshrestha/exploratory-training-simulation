@@ -237,8 +237,16 @@ def plot_figures(run_folder_path):
             fig = plt.figure(figsize=(6, 4))
             for sampling_method in average_dict[trainer_type]:
                 if len(average_dict[trainer_type][sampling_method][f'iter_{metric}']) != 0 and len(average_dict[trainer_type][sampling_method][f'iter_{metric}'][0]) != 0 and len(average_dict[trainer_type][sampling_method][f'iter_{metric}'][2]) !=0:
-                    plt.plot(average_dict[trainer_type][sampling_method]
-                            [f'iter_{metric}'][0], average_dict[trainer_type][sampling_method][f'iter_{metric}'][2], label='US' if sampling_method == "ActiveLR" else sampling_method)
+                    x_vals = average_dict[trainer_type][sampling_method][f'iter_{metric}'][0]
+                    y_vals = average_dict[trainer_type][sampling_method][f'iter_{metric}'][2]
+
+                    # if len(x_vals) > 30:
+                    #     x_vals = x_vals[:30]
+                    
+                    # if len(y_vals) > 30:
+                    #     y_vals = y_vals[:30]
+
+                    plt.plot(x_vals, y_vals, label='US' if sampling_method == "ActiveLR" else sampling_method)
             plt.xlabel('Iterations')
             if metric == 'mae_ground_model_error':
                 plt.ylabel("Mean Absolute Error(MAE)")
@@ -248,6 +256,12 @@ def plot_figures(run_folder_path):
                 plt.ylabel("Mean Absolute Error(MAE)")
                 # plt.title(
                 #     "Difference between Trainer Model and Learner Model")
+            elif "f1" in metric:
+                plt.ylabel("F1 Score")
+            elif "precision" in metric:
+                plt.ylabel("Precision")
+            elif "recall" in metric:
+                plt.ylabel("Recall")
             else:
                 plt.ylabel(metric)
                 # plt.title(
@@ -295,6 +309,7 @@ if __name__ == "__main__":
             dir1 = os.path.join(
                 base_run_dir, f"dataset={dataset}", f"use_val_data={use_val_data}")
             if not os.path.exists(dir1):
+                print(f"Directory doesn't exist: {base_run_dir}")
                 continue
 
             '''Loop into the dirty proportion folders'''

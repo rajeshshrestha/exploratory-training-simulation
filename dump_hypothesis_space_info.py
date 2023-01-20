@@ -12,7 +12,7 @@ parser.add_argument('--drop-duplicates', default=False, action='store_true')
 parser.add_argument('--data-path', required=True, type=str)
 parser.add_argument('--dataset-name', required=True, type=str)
 parser.add_argument('--rel-fields', type=str, nargs="+", default=None)
-parser.add_argument('--noise-ratio', default=None, type=float)
+parser.add_argument('--injection-noise-ratio', default=None, type=float)
 
 args = parser.parse_args()
 print(args)
@@ -55,15 +55,13 @@ if args.drop_duplicates:
 else:
     data = data[rel_cols]
 
-if args.noise_ratio and args.noise_ratio > 0:
-    noisy_data_num = int(args.noise_ratio * len(data))
-    noisy_data = []
-    unique_vals = {field: list(data[field].unique()) for field in rel_cols}
+if args.injection_noise_ratio and args.injection_noise_ratio > 0:
+    noisy_data_num = int(args.injection_noise_ratio * len(data))
+    data_indices = list(data.index)
     for i in range(noisy_data_num):
-        noisy_data.append(
-            {field: sample(unique_vals[field], k=1)[0] for field in rel_cols})
-    noisy_df = pd.DataFrame(noisy_data)
-    data = pd.concat([data, noisy_df], ignore_index=True)
+        idx = sample(data_indices, k=1)[0]
+        field = sample(rel_cols, k=1)[0]
+        data.at[idx, field] = 'injection-noise'
 
 data.to_csv(
     f"./data/preprocessed-data/{args.dataset_name}-clean-full.csv")
