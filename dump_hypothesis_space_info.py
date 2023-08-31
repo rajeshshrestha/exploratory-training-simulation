@@ -61,7 +61,7 @@ if args.injection_noise_ratio and args.injection_noise_ratio > 0:
     for i in range(noisy_data_num):
         idx = sample(data_indices, k=1)[0]
         field = sample(rel_cols, k=1)[0]
-        data.at[idx, field] = 'injection-noise'
+        data.at[idx, field] = -1
 
 data.to_csv(
     f"./data/preprocessed-data/{args.dataset_name}-clean-full.csv")

@@ -91,7 +91,7 @@ def get_hypothesis_info_dict(hypothesis):
 
 '''Parse arguments'''
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', default='airport', type=str)
+parser.add_argument('--dataset', default='tax', type=str)
 
 args = parser.parse_args()
 print(args)
