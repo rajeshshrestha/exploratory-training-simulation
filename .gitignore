@@ -18,3 +18,5 @@ runs
 figures
 converged_models
 sync.sh
+scenarios.json
+trainer_model.json

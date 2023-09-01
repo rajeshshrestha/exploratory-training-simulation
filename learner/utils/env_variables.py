@@ -19,6 +19,9 @@ project_name = os.getenv("PROJECT_NAME", None)
 STORE_BASE_PATH = os.getenv("STORE_BASE_PATH", None)
 if STORE_BASE_PATH is None:
     if project_name is None:
-            STORE_BASE_PATH = "./store"
+        STORE_BASE_PATH = "./store"
     else:
-        STORE_BASE_PATH= os.path.join("/data/shresthr", project_name, "store")
+        STORE_BASE_PATH= os.path.join("./run-data", project_name, "store")
+        
+    os.makedirs(STORE_BASE_PATH, exist_ok=True)
+    

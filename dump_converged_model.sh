@@ -12,3 +12,4 @@ python global_converged_model_dumper.py  $1
 
 pkill -f gunicorn
 sleep 30
+echo "Finished Dumping Converged Model"

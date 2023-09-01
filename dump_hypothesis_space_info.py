@@ -63,6 +63,7 @@ if args.injection_noise_ratio and args.injection_noise_ratio > 0:
         field = sample(rel_cols, k=1)[0]
         data.at[idx, field] = -1
 
+os.makedirs("./data/preprocessed-data", exist_ok=True)
 data.to_csv(
     f"./data/preprocessed-data/{args.dataset_name}-clean-full.csv")
 
