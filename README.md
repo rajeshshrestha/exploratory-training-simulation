@@ -10,7 +10,7 @@
 3. Activate virtual environment  
    `source .venv/bin/activate`
 4. Install requirements  
-   `pip install -r learner/requirements.txt`
+   `pip install -r requirements.txt`
 
 ## Process and prepare data
 
