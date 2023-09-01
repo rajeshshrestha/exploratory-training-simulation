@@ -8,5 +8,15 @@ simulation-data
 .DS_Store
 new_scenarios.json
 **logs
+data/preprocessed-data
+data/processed-exp-data
 data/processed-data
 data/processed-exp-data/filtered_processed_scenarios.pk
+store-archive
+**store**
+runs
+figures
+converged_models
+sync.sh
+scenarios.json
+trainer_model.json

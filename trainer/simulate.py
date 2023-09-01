@@ -1,173 +1,161 @@
-import json
-import random
-import re
 import sys
 
-import requests
-from tqdm import tqdm
 from functools import partial
 from multiprocessing import Pool
 import os
 
-from initialize_variables import scenarios, models_dict
-
-# Build the feedback dictionary object that will be utilized during the
-# interaction
-def buildFeedbackMap(data, feedback, header):
-    feedbackMap = dict()
-    cols = header
-    for row in data.keys():
-        tup = dict()
-        for col in cols:
-            trimmedCol = re.sub(r'/[\n\r]+/g', '', col)
-            cell = next(f for f in feedback if
-                        f['row'] == data[row]['id'] and f[
-                            'col'] == trimmedCol)
-            tup[col] = cell['marked']
-        feedbackMap[row] = tup
-    return feedbackMap
+from utils.interact_learner import initialize_learner, get_initial_sample
+from utils.interact_learner import send_feedback
+from user_models.trainer import TrainerModel
 
 
-def run(s, b_type):
-    if s is None:
-        s = 'omdb'
+def run(scenario_id,
+        trainer_type,
+        sampling_method,
+        use_val_data,
+        trainer_prior_type,
+        learner_prior_type,
+        is_global=False):
 
-    iter_num = 0
+    # Initialize the learner
+    project_id, _ = initialize_learner(
+        scenario_id=scenario_id,
+        sampling_method=sampling_method,
+        trainer_type=trainer_type,
+        use_val_data=use_val_data,
+        trainer_prior_type=trainer_prior_type,
+        learner_prior_type=learner_prior_type,
+        is_global = is_global)
 
-    # Start the interaction
+    # Get the first batch of sample from the learner
+    data, columns, feedback = get_initial_sample(project_id=project_id)
 
-    '''
-        Initialize the project and the user intital prior belief
-    '''
-    try:
-        r = requests.post('http://localhost:5000/duo/api/import', data={
-            'scenario_id': s,
-            'email': '',
-            'initial_fd': 'Not Sure',
-            # TODO: Logic for what the simulated user thinks at first
-            'fd_comment': '',
-            'skip_user': True,
-            # Skip user email handling since this is not part of the study
-            'violation_ratio': 'close'
-        })
-        res = r.json()
-        project_id = res['project_id']
-    except Exception as e:
-        print(e)
-        return
+    # initialize the trainer
+    trainer = TrainerModel(trainer_type=trainer_type,
+                           trainer_prior_type=trainer_prior_type,
+                           scenario_id=scenario_id,
+                           project_id=project_id,
+                           columns=columns)
 
-    feedback = None
-
-    # Get first sample
-    try:
-        r = requests.post('http://localhost:5000/duo/api/sample',
-                          data={'project_id': project_id})
-        res = r.json()
-
-        sample = res['sample']
-        data = json.loads(sample)
-        feedback = json.loads(res['feedback'])
-
-        # ! Change the sample to string type with None replaced by '' for
-        # all the fields in the sample except for the id field
-        for row in data.keys():
-            for j in data[row].keys():
-                if data[row][j] is None:
-                    data[row][j] = ''
-                elif type(data[row][j]) != 'str':
-                    data[row][j] = str(data[row][j])
-
-        print('prepped data')
-    except Exception as e:
-        print(e)
-        return
-
-    print('initialized feedback object')
     msg = ''
     iter_num = 0
-
-    # Get table column names
-    header = list()
-    for row in data.keys():
-        header = [c for c in data[row].keys() if c != 'id']
-        break
 
     # Begin iterations and continue till done
     while msg != '[DONE]' and (len(data) > 0):
         iter_num += 1
+        if is_global:
+            print(iter_num)
 
-        # Initialize feedback dictionary utilized during interaction
-        feedbackMap = buildFeedbackMap(data, feedback,
-                                       header)
+        feedback_dict = trainer.get_feedback_dict(data, feedback)
 
-        # Decide for each row whether to mark or not
-        for row in data.keys():
-            '''Full oracle'''
-            if b_type == 'full-oracle':
-                if not models_dict[s]["predictions"][row]:
-                    for rh in header:
-                        feedbackMap[row][rh] = True
+        '''Get Model FD conf dict for metric computation on learner side'''
+        model_dict = trainer.get_model()
+        data, feedback, msg = send_feedback(project_id=project_id,
+                                            feedback_dict=feedback_dict,
+                                            model_dict=model_dict)
 
-        # Set up the feedback representation that will be given to the
-        # server
-        feedback = dict()
-        for f in feedbackMap.keys():
-            feedback[data[f]['id']] = feedbackMap[f]
-
-        formData = {
-            'project_id': project_id,
-            'feedback': json.dumps(feedback),
-            'current_user_h': 'Not Sure',
-            # TODO: Hypothesize an FD in the simulation in each iteration
-            'user_h_comment': '',
-        }
-
-        try:
-            r = requests.post('http://localhost:5000/duo/api/feedback',
-                              data=formData)  # Send feedback to server
-            res = r.json()
-            msg = res['msg']
-            if msg != '[DONE]':  # Server says do another iteration
-                sample = res['sample']
-                feedback = json.loads(res['feedback'])
-                data = json.loads(sample)
-
-                for row in data.keys():
-                    for j in data[row].keys():
-                        if j == 'id':
-                            continue
-
-                        if data[row][j] is None:
-                            data[row][j] = ''
-                        elif type(data[row][j]) != 'str':
-                            data[row][j] = str(data[row][j])
-
-        except Exception as e:
-            print(e)
-            msg = '[DONE]'
+    return model_dict
 
 
 if __name__ == '__main__':
     '''
     Arg 1: Scenarios
-    Arg 2: Bayesian Type
-            Values: ["oracle", "informed", "uninformed"]
-    Arg 3: Decision Type
-            Values: ["coinflip", "threshold]
+    Arg 2: Trainer Type
+    Arg 3: Data Sampling method
     Arg 4: Number of runs
-    Arg 5: Whether precision or recall
+    Arg 5: Whether to use Validation data for interaction or not
+    Arg 6: Trainer Prior Type
+    Arg 7: Learner Prior Type
     '''
 
-    s = sys.argv[1]  # Scenario #
-    b_type = sys.argv[
-        2]  # Bayesian type ("oracle", "informed", "uninformed", "random")
-    decision_type = sys.argv[3]  # Decision type ("coin-flip" or "threshold")
+    # Scenario
+    scenario_id = sys.argv[1] if sys.argv[1] is not None else 'omdb'
+    trainer_type = sys.argv[
+        2]
+    sampling_method = sys.argv[3]
     num_runs = int(sys.argv[4])  # How many runs of this simulation to do
-    stat_calc = None if len(sys.argv) < 6 else sys.argv[
-        5]  # Are we evaluating precision or recall?
+    use_val_data = (sys.argv[5].lower() == 'true')
+    trainer_prior_type = sys.argv[6].lower()
+    learner_prior_type = sys.argv[7].lower()
 
+    if len(sys.argv) > 8:
+        run_parallel = (sys.argv[8].lower() == 'true')
+    else:
+        run_parallel = False
+
+    assert trainer_type in ['full-oracle',
+                            'learning-oracle',
+                            'bayesian'],\
+        "Invalid trainer type passed!!!"
+    assert sampling_method in ['all',
+                                'RANDOM',
+                               'ACTIVELR',
+                               'STOCHASTICBR',
+                               'STOCHASTICUS'],\
+        "Invalid sampling method passed!!!"
+    if sampling_method.lower() == 'all':
+        sampling_method_lst = ['RANDOM',
+                                'ACTIVELR',
+                                'STOCHASTICBR',
+                                'STOCHASTICUS']
+    else:
+        sampling_method_lst = [sampling_method]
+
+    assert trainer_prior_type in [ 'all',
+                                  'uniform-0.1',
+                                  'uniform-0.5',
+                                  'uniform-0.9',
+                                  'data-estimate',
+                                  'random'
+                                  ], "Invalid Trainer Prior type used!!!"
+    if trainer_prior_type.lower() == 'all':
+        trainer_prior_type_lst = ['uniform-0.1',
+                                    #   'uniform-0.5',
+                                    'uniform-0.9',
+                                    'data-estimate',
+                                    'random'
+                                    ]
+    else:
+        trainer_prior_type_lst =  [trainer_prior_type]
+
+    assert learner_prior_type in ['all',
+                                  'uniform-0.1',
+                                  'uniform-0.5',
+                                  'uniform-0.9',
+                                  'data-estimate',
+                                  'random'
+                                  ], "Invalid Learner Prior type used!!!"
+    if learner_prior_type.lower() == "all":
+        learner_prior_type_lst = ['uniform-0.1',
+                                    #   'uniform-0.5',
+                                    'uniform-0.9',
+                                    'data-estimate',
+                                    'random'
+                                    ]
+    else:
+        learner_prior_type_lst = [learner_prior_type]
     
-    cpu_num = os.cpu_count()
 
-    with Pool(10) as p:
-        p.map(partial(run, b_type=b_type), [s for i in range(num_runs)])
+
+    for learner_prior_type in learner_prior_type_lst:
+        for trainer_prior_type in trainer_prior_type_lst:
+            for sampling_method in sampling_method_lst:
+                print(learner_prior_type, trainer_prior_type, sampling_method)
+                if not run_parallel:
+                    for i in range(num_runs):
+                        run(scenario_id=scenario_id,
+                            trainer_type=trainer_type,
+                            sampling_method=sampling_method,
+                            use_val_data=use_val_data,
+                            trainer_prior_type=trainer_prior_type,
+                            learner_prior_type=learner_prior_type)
+                else:
+                    cpu_num = os.cpu_count()
+                    with Pool(min(cpu_num-1, num_runs)) as p:
+                        p.map(partial(run,
+                                    trainer_type=trainer_type,
+                                    sampling_method=sampling_method,
+                                    use_val_data=use_val_data,
+                                    trainer_prior_type=trainer_prior_type,
+                                    learner_prior_type=learner_prior_type),
+                            [scenario_id for i in range(num_runs)])

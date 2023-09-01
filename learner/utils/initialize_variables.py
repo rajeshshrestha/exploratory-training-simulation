@@ -7,7 +7,7 @@ import os
 import pickle as pk
 from copy import deepcopy
 
-setup_logging("./logs")
+setup_logging("./logs", log_level="ERROR")
 
 logger = logging.getLogger(__file__)
 
@@ -26,7 +26,8 @@ with open('../data/processed-exp-data/filtered_processed_scenarios.pk', 'rb') as
 
 logger.info("Reading the processed datasets...")
 with open('../data/processed-exp-data/processed_dfs.pk', 'rb') as fp:
-    labeled_processed_dfs = pk.load(fp)
-    processed_dfs = deepcopy(labeled_processed_dfs)
-    for dataset in processed_dfs:
-        del processed_dfs[dataset]['is_clean']
+    processed_dfs = pk.load(fp)
+
+logger.info("Reading validation_indices...")
+with open("../data/processed-exp-data/validation_indices.pk", 'rb') as fp:
+    validation_indices_dict = pk.load(fp)

@@ -1,18 +1,18 @@
+from ast import Raise
 import json
 import os
 import pickle
-from pprint import pprint
-
-import pandas as pd
+import logging
 from flask import request
 from flask_restful import Resource
 from rich.console import Console
-from .initialize_variables import scenarios, processed_dfs
+from .initialize_variables import scenarios, processed_dfs, validation_indices_dict, models_dict
 from .helper import StudyMetric, FDMeta, initialPrior
 import random
-from .env_variables import SAMPLING_METHOD
+from .env_variables import STORE_BASE_PATH, LEARNER_PRIOR_VARIANCE
 
 console = Console()
+logger = logging.getLogger(__file__)
 
 
 class Import(Resource):
@@ -21,50 +21,79 @@ class Import(Resource):
 
     def post(self):
         # Initialize a new project
-        # projects = [('0x' + d) for d in os.listdir('./store') if
-        #             os.path.isdir(os.path.join('./store/', d))]
+        # projects = [('0x' + d) for d in os.listdir(f'{STORE_BASE_PATH}') if
+        #             os.path.isdir(os.path.join(f'{STORE_BASE_PATH}/', d))]
         # if len(projects) == 0:
         #     new_project_id = '{:08x}'.format(1)
         # else:
         #     project_ids = [int(d, 0) for d in projects]
         #     new_project_id = '{:08x}'.format(max(project_ids) + 1)
 
-        new_project_id = SAMPLING_METHOD+"_"+str(random.randint(1,1e15))
-        new_project_dir = './store/' + new_project_id
-
-        # Save the new project
-        try:
-            os.mkdir(new_project_dir)
-        except OSError:
-            returned_data = {
-                'msg': '[ERROR] Unable to create a directory for this project.'
-            }
-            pprint(returned_data)
-            response = json.dumps(returned_data)
-            return response, 500, {'Access-Control-Allow-Origin': '*'}
-
-        print('*** Project initialized ***')
-
         # Read the scenario number and initialize the scenario accordingly
         scenario_id = request.form.get('scenario_id')
         email = request.form.get('email')
         initial_user_h = request.form.get('initial_fd')
         fd_comment = request.form.get('fd_comment')
-        skip_user = request.form.get('skip_user')
+        skip_user = (request.form.get('skip_user').lower() == "true")
+        sampling_method = request.form.get('sampling_method')
+        trainer_type = request.form.get('trainer_type')
+        use_val_data = (request.form.get('use_val_data').lower() == "true")
+        learner_prior_type = request.form.get('learner_prior_type')
+        trainer_prior_type = request.form.get('trainer_prior_type')
+        is_global = (request.form.get('is_global').lower() == "true")
+
+
         if scenario_id is None or email is None:
             scenario_id = json.loads(request.data)['scenario_id']
             email = json.loads(request.data)['email']
             initial_user_h = json.loads(request.data)['initial_fd']
             fd_comment = json.loads(request.data)['fd_comment']
             skip_user = False if 'skip_user' not in json.loads(
-                request.data).keys() else json.loads(request.data)['skip_user']
+                request.data).keys() else (json.loads(request.data)['skip_user'].lower() == 'true')
+            sampling_method = json.loads(request.data)['sampling_type']
+            trainer_type = json.loads(request.data)['trainer_type']
+            use_val_data = (json.loads(request.data)[
+                            'use_val_data'].lower() == 'true')
+            learner_prior_type = json.loads(request.data)['learner_prior_type']
+            trainer_prior_type = json.loads(request.data)['trainer_prior_type']
+            is_global = (json.loads(request.data)[
+                            'is_global'].lower() == 'true')
 
-        console.log(initial_user_h)
+        logger.info(initial_user_h)
+
+        project_base_dir = f"dataset={scenario_id}/use_val_data={use_val_data}/" +\
+            f"dirty-proportion={round(models_dict[scenario_id]['dirty_proportion'],2)}/" +\
+            f"trainer-prior-type={trainer_prior_type}-learner-prior-type=" +\
+            f"{learner_prior_type}"
+
+        new_project_id = project_base_dir+"/" +\
+            trainer_type + "_" + sampling_method + \
+            "_"+str(random.randint(1, 1e15))
+        new_project_dir = f'{STORE_BASE_PATH}/' + new_project_id
+
+        # Save the new project
+        try:
+            os.makedirs(f'{STORE_BASE_PATH}/{project_base_dir}',
+                        exist_ok=True)
+            os.mkdir(new_project_dir)
+            os.makedirs(f'{new_project_dir}/iteration_fd_metadata/trainer',
+                        exist_ok=True)
+            os.makedirs(f'{new_project_dir}/iteration_fd_metadata/learner',
+                        exist_ok=True)
+        except OSError as e:
+            returned_data = {
+                'msg': f'[ERROR] Unable to create a directory for this project. \n {e}'
+            }
+            logger.info(returned_data)
+            response = json.dumps(returned_data)
+            return response, 500, {'Access-Control-Allow-Origin': '*'}
+
+        logger.info('*** Project initialized ***')
 
         if not skip_user:
             # Get the user from the users list
             try:
-                users = pickle.load(open('./study-utils/users.p', 'rb'))
+                users = pickle.load(open('./study-utils/users.pk', 'rb'))
             except Exception as e:
                 return {'msg': '[ERROR] users does not exist'}, 400, {
                     'Access-Control-Allow-Origin': '*'}
@@ -81,21 +110,26 @@ class Import(Resource):
             users[email] = user
 
             # Save the users object updates
-            pickle.dump(users, open('./study-utils/users.p', 'wb'))
+            pickle.dump(users, open('./study-utils/users.pk', 'wb'))
 
         project_info = {
             'email': email,
             'scenario_id': scenario_id,
+            'sampling_method': sampling_method,
+            'trainer_type': trainer_type,
+            'use_val_data': use_val_data,
+            'trainer_prior_type': trainer_prior_type,
+            'learner_prior_type': learner_prior_type,
+            'is_global': is_global
         }
 
         with open(new_project_dir + '/project_info.json', 'w') as f:
             json.dump(project_info, f, indent=4)
 
-        print('*** Project info saved ***')
+        logger.info('*** Project info saved ***')
 
         data = processed_dfs[scenario_id]
         header = [col for col in data.columns if col != 'is_clean']
-        scenario = scenarios[scenario_id]
 
         # Initialize the iteration counter
         current_iter = 0
@@ -118,44 +152,33 @@ class Import(Resource):
                     col] = list()
                 interaction_metadata['feedback_recent'][idx][col] = False
 
-        # Initialize hypothesis parameters
-        fd_metadata = dict()
-        for h in scenario['hypothesis_space']:
-            mu = 0.1
-            if mu == 1:
-                mu = 0.99999
-            variance = 0.0025  # hyperparameter
-
-            # Calculate alpha and beta
-            alpha, beta = initialPrior(mu, variance)
-
-
-            # Initialize the FD metadata object
-            fd_m = FDMeta(
-                fd=h,
-                a=alpha,
-                b=beta,
-            )
-
-            print('iter: 0'),
-            print('alpha:', fd_m.alpha)
-            print('beta:', fd_m.beta)
-
-            fd_metadata[h] = fd_m
-
         current_iter += 1
 
+        '''Initialize the learner model'''
+        fd_metadata = get_initial_fd_metadata(scenario_id=scenario_id,
+                                              prior_type=learner_prior_type)
+
         study_metrics = dict()
-        study_metrics['iter_err_precision'] = list()
-        study_metrics['iter_err_recall'] = list()
-        study_metrics['iter_err_f1'] = list()
-        study_metrics['all_err_precision'] = list()
-        study_metrics['all_err_recall'] = list()
-        study_metrics['all_err_f1'] = list()
+        # study_metrics['iter_err_precision'] = list()
+        # study_metrics['iter_err_recall'] = list()
+        # study_metrics['iter_err_f1'] = list()
+        # study_metrics['all_err_precision'] = list()
+        # study_metrics['all_err_recall'] = list()
+        # study_metrics['all_err_f1'] = list()
         study_metrics['iter_accuracy'] = list()
+        study_metrics['iter_recall'] = list()
+        study_metrics['iter_precision'] = list()
+        study_metrics['iter_f1'] = list()
+        study_metrics['iter_mae_ground_model_error'] = list()
+        study_metrics['iter_mae_trainer_model_error'] = list()
         study_metrics['elapsed_time'] = list()
+        study_metrics['iter_accuracy_converged'] = list()
+        study_metrics['iter_recall_converged'] = list()
+        study_metrics['iter_precision_converged'] = list()
+        study_metrics['iter_f1_converged'] = list()
+
         json.dump(study_metrics,
-                    open(new_project_dir + '/study_metrics.json', 'w'))
+                  open(new_project_dir + '/study_metrics.json', 'w'))
 
         # Initialize tuple metadata and value metadata objects
         tuple_weights = dict()
@@ -164,22 +187,121 @@ class Import(Resource):
             tuple_weights[idx] = 1 / len(data)
 
         pickle.dump(interaction_metadata,
-                    open(new_project_dir + '/interaction_metadata.p', 'wb'))
+                    open(new_project_dir + '/interaction_metadata.pk', 'wb'))
         pickle.dump(tuple_weights,
-                    open(new_project_dir + '/tuple_weights.p', 'wb'))
+                    open(new_project_dir + '/tuple_weights.pk', 'wb'))
         pickle.dump(fd_metadata,
-                    open(new_project_dir + '/fd_metadata.p', 'wb'))
+                    open(new_project_dir + '/fd_metadata.pk', 'wb'))
+
         pickle.dump(current_iter,
-                    open(new_project_dir + '/current_iter.p', 'wb'))
+                    open(new_project_dir + '/current_iter.pk', 'wb'))
+        model_dict = dict((fd, fd_m.conf)for fd, fd_m in fd_metadata.items())
+        pickle.dump(model_dict,
+                    open(f'{new_project_dir}/iteration_fd_metadata/learner/model_0.pk', 'wb'))
 
-        total_indices = set(data.index)
+        if use_val_data:
+            logger.info(
+                "Using all data including validation data in interaction")
+            total_indices = set(data.index)
+        else:
+            logger.info("Using data except val data for training")
+            total_indices = set(data.index) - \
+                validation_indices_dict[scenario_id]
         pickle.dump(total_indices,
-                    open(new_project_dir + '/unserved_indices.p', 'wb'))
+                    open(new_project_dir + '/unserved_indices.pk', 'wb'))
 
-        print('*** Metadata and objects initialized and saved ***')
+        logger.info('*** Metadata and objects initialized and saved ***')
 
         # Return information to the user
         response = {
             'project_id': new_project_id
         }
         return response, 201, {'Access-Control-Allow-Origin': '*'}
+
+
+def get_initial_fd_metadata(scenario_id, prior_type):
+
+    scenario = scenarios[scenario_id]
+
+    # Initialize hypothesis parameters
+    fd_metadata = dict()
+
+    variance = LEARNER_PRIOR_VARIANCE # hyperparameter
+    logger.info(f"Initializing learner prior model with variance: {variance}")
+    if prior_type in ['uniform-0.1',
+                      'uniform-0.5',
+                      'uniform-0.9']:
+        mu = float(prior_type.split("-")[1])
+        logger.info(f"mu: {mu}")
+
+        for h in scenario['hypothesis_space']:
+
+            # Calculate alpha and beta
+            alpha, beta = initialPrior(mu, variance)
+
+            # Initialize the FD metadata object
+            fd_m = FDMeta(
+                fd=h,
+                a=alpha,
+                b=beta,
+            )
+
+            logger.info('iter: 0'),
+            logger.info(f'alpha: {fd_m.alpha}')
+            logger.info(f'beta: {fd_m.beta}')
+
+            fd_metadata[h] = fd_m
+
+    elif prior_type == 'random':
+        for h in scenario['hypothesis_space']:
+            mu = random.uniform(0, 1)
+            # Calculate alpha and beta
+            alpha, beta = initialPrior(mu, variance)
+
+            # Initialize the FD metadata object
+            fd_m = FDMeta(
+                fd=h,
+                a=alpha,
+                b=beta,
+            )
+
+            logger.info('iter: 0'),
+            logger.info(f"mu: {mu}")
+            logger.info(f'alpha: {fd_m.alpha}')
+            logger.info(f'beta: {fd_m.beta}')
+
+            fd_metadata[h] = fd_m
+
+    elif prior_type == 'data-estimate':
+        for h in scenario['hypothesis_space']:
+            mu = compute_hyp_conf_in_data(fd=h,
+                                          scenario_id=scenario_id)
+            # Calculate alpha and beta
+            alpha, beta = initialPrior(mu, variance)
+
+            # Initialize the FD metadata object
+            fd_m = FDMeta(
+                fd=h,
+                a=alpha,
+                b=beta,
+            )
+
+            logger.info('iter: 0'),
+            logger.info(f"mu: {mu}")
+            logger.info(f'alpha: {fd_m.alpha}')
+            logger.info(f'beta: {fd_m.beta}')
+
+            fd_metadata[h] = fd_m
+    else:
+        raise Exception(
+            f"Invalid prior type: {prior_type} specified for learner!!!")
+
+    return fd_metadata
+
+
+def compute_hyp_conf_in_data(fd, scenario_id):
+    scenario = scenarios[scenario_id]
+    support_num = len(scenario['hypothesis_space'][fd]['support_pairs'])
+    violation_num = len(scenario['hypothesis_space'][fd]['support_pairs'])
+
+    return support_num/(support_num+violation_num+1e-7)
